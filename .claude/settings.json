@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__supabase__list_projects",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__execute_sql",
+      "mcp__supabase__get_project",
+      "mcp__supabase__generate_typescript_types",
+      "WebSearch",
+      "Bash"
+    ]
+  }
+}

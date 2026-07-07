@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+/*
+ * Finanzapp — tema "premium finance" (oscuro fijo).
+ * Paleta: gris carbón oscuro + acento morado (referencia estilo Cryptoin).
+ * Verde/rojo reservados para positivo/negativo. Sin degradados multicolor.
+ */
+:root {
+  --background: #131118;
+  --foreground: #f5f4f8;
+
+  --surface: #1b1823;
+  --surface-2: #242030;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.14);
+
+  --text-secondary: #a5a1b3;
+  --text-muted: #6e6a7c;
+
+  --violet: #a78bfa;
+  --violet-deep: #8b5cf6;
+
+  --good: #4ade80;
+  --bad: #f87171;
+
+  /* Data viz */
+  --viz-income: #a78bfa;
+  --viz-expense: #f87171;
+  --viz-grid: rgba(255, 255, 255, 0.06);
+  --viz-axis: #6e6a7c;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+  --color-violet: var(--violet);
+  --color-violet-deep: var(--violet-deep);
+  --color-good: var(--good);
+  --color-bad: var(--bad);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+}
+
+/* Tarjeta base */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+}
+
+::selection {
+  background: var(--violet-deep);
+  color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
