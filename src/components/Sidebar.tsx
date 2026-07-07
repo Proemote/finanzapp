@@ -12,10 +12,18 @@ interface Props {
   hasData: boolean;
 }
 
-const NAV = [
+interface NavItem {
+  label: string;
+  icon: typeof LayoutDashboard;
+  href: string;
+  active: boolean;
+  soon?: boolean;
+}
+
+const NAV: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, href: "#dashboard", active: true },
   { label: "Movimientos", icon: ArrowLeftRight, href: "#movimientos", active: false },
-  { label: "Analytics", icon: LineChart, href: "#", active: false, soon: true },
+  { label: "Analytics", icon: LineChart, href: "#analytics", active: false },
   { label: "Cuentas", icon: Wallet, href: "#cuentas", active: false },
 ];
 

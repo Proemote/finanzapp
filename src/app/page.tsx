@@ -6,12 +6,15 @@ import {
   CloudUpload,
   Download,
   Loader2,
+  Plus,
   Search,
   Upload,
   Wallet,
 } from "lucide-react";
 import AccountModal from "@/components/AccountModal";
 import AccountsPanel from "@/components/AccountsPanel";
+import AddTransactionModal from "@/components/AddTransactionModal";
+import AnalyticsPanel from "@/components/AnalyticsPanel";
 import ChartsPanel from "@/components/ChartsPanel";
 import Sidebar from "@/components/Sidebar";
 import SummaryCards from "@/components/SummaryCards";
@@ -33,6 +36,7 @@ export default function Home() {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [query, setQuery] = useState("");
   const [pendingFiles, setPendingFiles] = useState<File[] | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [activeAccount, setActiveAccount] = useState(ALL_ACCOUNTS);
   const importRef = useRef<HTMLInputElement>(null);
 
@@ -132,6 +136,15 @@ export default function Home() {
     }
   }, []);
 
+  const handleAddTransaction = useCallback((tx: Transaction) => {
+    setTransactions((prev) => [...prev, tx]);
+    setShowAddModal(false);
+    setStatus({
+      kind: "ok",
+      message: `Movimiento añadido: ${tx.description} (${tx.account})`,
+    });
+  }, []);
+
   const handleCategoryChange = useCallback((id: string, category: string) => {
     setTransactions((prev) => prev.map((t) => (t.id === id ? { ...t, category } : t)));
   }, []);
@@ -175,6 +188,14 @@ export default function Home() {
           accounts={accounts.filter((a) => a !== SIN_CUENTA)}
           onConfirm={(account) => processFiles(pendingFiles, account)}
           onCancel={() => setPendingFiles(null)}
+        />
+      )}
+
+      {showAddModal && (
+        <AddTransactionModal
+          accounts={accounts.filter((a) => a !== SIN_CUENTA)}
+          onConfirm={handleAddTransaction}
+          onCancel={() => setShowAddModal(false)}
         />
       )}
 
@@ -235,6 +256,10 @@ export default function Home() {
             </div>
             {hasData && (
               <div className="flex flex-wrap gap-2">
+                <button onClick={() => setShowAddModal(true)} className={actionBtn}>
+                  <Plus className="h-4 w-4" aria-hidden />
+                  Añadir
+                </button>
                 <button onClick={handleLoad} className={actionBtn}>
                   <CloudDownload className="h-4 w-4" aria-hidden />
                   Cargar
@@ -275,12 +300,18 @@ export default function Home() {
           {!hasData ? (
             <div className="space-y-5">
               <UploadZone onFiles={handleFiles} />
-              <p className="text-center">
+              <p className="flex flex-wrap justify-center gap-2 text-center">
                 <button
                   onClick={handleLoad}
                   className="cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium text-violet transition-colors duration-150 hover:bg-violet/10"
                 >
                   …o cargar movimientos guardados en Supabase
+                </button>
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium text-violet transition-colors duration-150 hover:bg-violet/10"
+                >
+                  …o añadir un movimiento a mano
                 </button>
               </p>
             </div>
@@ -307,6 +338,7 @@ export default function Home() {
 
               <SummaryCards balance={t.balance} months={months} />
               <ChartsPanel transactions={visible} />
+              <AnalyticsPanel transactions={visible} />
               <AccountsPanel transactions={transactions} />
               <TransactionsTable
                 transactions={visible}
