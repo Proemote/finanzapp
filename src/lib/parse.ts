@@ -2,8 +2,8 @@ import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import type { ParseResult, Transaction } from "./types";
 
-type Cell = string | number | boolean | Date | null | undefined;
-type Row = Cell[];
+export type Cell = string | number | boolean | Date | null | undefined;
+export type Row = Cell[];
 
 const DATE_HEADERS = ["fecha", "f. valor", "f.valor", "fecha operacion", "fecha operación", "fecha valor", "date", "dia", "día"];
 const DESC_HEADERS = ["concepto", "descripcion", "descripción", "description", "detalle", "movimiento", "memo", "beneficiario", "payee"];
@@ -182,17 +182,26 @@ function inferColumns(rows: Row[]): ColumnMap | null {
   return null;
 }
 
-function rowsToTransactions(rows: Row[], source: string): ParseResult {
-  const detected = detectColumns(rows);
+function rowsToTransactions(
+  rows: Row[],
+  source: string,
+  forced?: { map: ColumnMap; startRow: number }
+): ParseResult {
   let map: ColumnMap | null;
   let startRow: number;
 
-  if (detected) {
-    map = detected.map;
-    startRow = detected.headerRow + 1;
+  if (forced) {
+    map = forced.map;
+    startRow = forced.startRow;
   } else {
-    map = inferColumns(rows);
-    startRow = 0;
+    const detected = detectColumns(rows);
+    if (detected) {
+      map = detected.map;
+      startRow = detected.headerRow + 1;
+    } else {
+      map = inferColumns(rows);
+      startRow = 0;
+    }
   }
 
   if (!map) return { transactions: [], skippedRows: rows.length, totalRows: rows.length };
@@ -234,19 +243,39 @@ function rowsToTransactions(rows: Row[], source: string): ParseResult {
   return { transactions, skippedRows: skipped, totalRows: rows.length - startRow };
 }
 
-/** Parsea un File (CSV, XLS o XLSX) y devuelve movimientos normalizados. */
-export async function parseFile(file: File): Promise<ParseResult> {
+/** Lee las filas crudas de un File (CSV, XLS o XLSX). */
+export async function readFileRows(file: File): Promise<Row[]> {
   const name = file.name.toLowerCase();
 
   if (name.endsWith(".csv") || name.endsWith(".txt")) {
     const text = await file.text();
     const result = Papa.parse<string[]>(text, { skipEmptyLines: true });
-    return rowsToTransactions(result.data as Row[], file.name);
+    return result.data as Row[];
   }
 
   const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer, { cellDates: true });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json<Row>(sheet, { header: 1, raw: true });
+  return XLSX.utils.sheet_to_json<Row>(sheet, { header: 1, raw: true });
+}
+
+/** Parsea un File (CSV, XLS o XLSX) y devuelve movimientos normalizados. */
+export async function parseFile(file: File): Promise<ParseResult> {
+  const rows = await readFileRows(file);
   return rowsToTransactions(rows, file.name);
+}
+
+export interface ManualMapping {
+  date: number;
+  description: number;
+  amount: number;
+  skipFirstRow: boolean;
+}
+
+/** Parsea filas con columnas elegidas a mano por el usuario (importador visual). */
+export function parseWithMapping(rows: Row[], source: string, m: ManualMapping): ParseResult {
+  return rowsToTransactions(rows, source, {
+    map: { date: m.date, description: m.description, amount: m.amount },
+    startRow: m.skipFirstRow ? 1 : 0,
+  });
 }

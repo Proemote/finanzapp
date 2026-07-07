@@ -30,6 +30,14 @@ export async function saveTransactions(transactions: Transaction[]): Promise<{ e
   return error ? { error: error.message } : {};
 }
 
+/** Elimina un movimiento de Supabase (si no existe allí, no pasa nada). */
+export async function deleteTransaction(id: string): Promise<{ error?: string }> {
+  const supabase = getSupabase();
+  if (!supabase) return {};
+  const { error } = await supabase.from("transactions_mvp").delete().eq("id", id);
+  return error ? { error: error.message } : {};
+}
+
 /** Carga todos los movimientos guardados en Supabase. */
 export async function loadTransactions(): Promise<{ data?: Transaction[]; error?: string }> {
   const supabase = getSupabase();

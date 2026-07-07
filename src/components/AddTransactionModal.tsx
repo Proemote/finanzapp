@@ -8,20 +8,24 @@ import type { Transaction } from "@/lib/types";
 interface Props {
   /** Cuentas existentes, para sugerirlas */
   accounts: string[];
+  /** Si se pasa, el modal edita este movimiento en lugar de crear uno nuevo */
+  initial?: Transaction;
   onConfirm: (transaction: Transaction) => void;
   onCancel: () => void;
 }
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-export default function AddTransactionModal({ accounts, onConfirm, onCancel }: Props) {
-  const [type, setType] = useState<"expense" | "income">("expense");
-  const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(today());
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
-  const [categoryTouched, setCategoryTouched] = useState(false);
-  const [account, setAccount] = useState("Efectivo");
+export default function AddTransactionModal({ accounts, initial, onConfirm, onCancel }: Props) {
+  const [type, setType] = useState<"expense" | "income">(
+    initial && initial.amount >= 0 ? "income" : "expense"
+  );
+  const [amount, setAmount] = useState(initial ? String(Math.abs(initial.amount)) : "");
+  const [date, setDate] = useState(initial?.date ?? today());
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [category, setCategory] = useState(initial?.category ?? "");
+  const [categoryTouched, setCategoryTouched] = useState(!!initial);
+  const [account, setAccount] = useState(initial?.account || "Efectivo");
   const [error, setError] = useState("");
   const firstFieldRef = useRef<HTMLInputElement>(null);
 
@@ -54,13 +58,13 @@ export default function AddTransactionModal({ accounts, onConfirm, onCancel }: P
       return;
     }
     onConfirm({
-      id: `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      id: initial?.id ?? `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       date,
       description: description.trim(),
       amount: Math.abs(value) * (type === "expense" ? -1 : 1),
       category,
       account: account.trim() || "Efectivo",
-      source: "manual",
+      source: initial?.source ?? "manual",
     });
   };
 
@@ -86,9 +90,13 @@ export default function AddTransactionModal({ accounts, onConfirm, onCancel }: P
             </span>
             <div>
               <h2 id="add-tx-title" className="text-base font-semibold">
-                Añadir movimiento
+                {initial ? "Editar movimiento" : "Añadir movimiento"}
               </h2>
-              <p className="mt-0.5 text-xs text-muted">Pagos en efectivo u otros no bancarios</p>
+              <p className="mt-0.5 text-xs text-muted">
+                {initial
+                  ? "Corrige los datos y guarda"
+                  : "Pagos en efectivo u otros no bancarios"}
+              </p>
             </div>
           </div>
           <button
@@ -230,7 +238,7 @@ export default function AddTransactionModal({ accounts, onConfirm, onCancel }: P
             onClick={submit}
             className="cursor-pointer rounded-full bg-violet-deep px-5 py-2 text-sm font-semibold text-white transition-opacity duration-150 hover:opacity-90"
           >
-            Añadir
+            {initial ? "Guardar cambios" : "Añadir"}
           </button>
         </div>
       </div>

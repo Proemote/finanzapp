@@ -16,6 +16,7 @@ import AccountsPanel from "@/components/AccountsPanel";
 import AddTransactionModal from "@/components/AddTransactionModal";
 import AnalyticsPanel from "@/components/AnalyticsPanel";
 import ChartsPanel from "@/components/ChartsPanel";
+import ColumnMapperModal from "@/components/ColumnMapperModal";
 import Sidebar from "@/components/Sidebar";
 import SummaryCards from "@/components/SummaryCards";
 import TransactionsTable from "@/components/TransactionsTable";
@@ -23,11 +24,28 @@ import UploadZone from "@/components/UploadZone";
 import { monthlySummaries, SIN_CUENTA, totals } from "@/lib/analytics";
 import { classifyByRules, defaultCategory, UNCLASSIFIED } from "@/lib/categories";
 import { exportMasterExcel } from "@/lib/export";
-import { parseFile } from "@/lib/parse";
-import { loadTransactions, saveTransactions } from "@/lib/supabase";
+import {
+  parseFile,
+  parseWithMapping,
+  readFileRows,
+  type ManualMapping,
+  type Row,
+} from "@/lib/parse";
+import { deleteTransaction, loadTransactions, saveTransactions } from "@/lib/supabase";
 import type { Transaction } from "@/lib/types";
 
-type Status = { kind: "idle" | "working" | "error" | "ok"; message?: string };
+type Status = {
+  kind: "idle" | "working" | "error" | "ok";
+  message?: string;
+  /** Si existe, el aviso muestra un botón "Deshacer" */
+  undo?: () => void;
+};
+
+interface MapperState {
+  rows: Row[];
+  fileName: string;
+  account: string;
+}
 
 const ALL_ACCOUNTS = "__all__";
 
@@ -37,6 +55,8 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [pendingFiles, setPendingFiles] = useState<File[] | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [mapper, setMapper] = useState<MapperState | null>(null);
   const [activeAccount, setActiveAccount] = useState(ALL_ACCOUNTS);
   const importRef = useRef<HTMLInputElement>(null);
 
@@ -58,28 +78,9 @@ export default function Home() {
     setPendingFiles(files);
   }, []);
 
-  /** Paso 2: con la cuenta elegida, parsear + clasificar + fusionar. */
-  const processFiles = useCallback(async (files: File[], account: string) => {
-    setPendingFiles(null);
-    setStatus({ kind: "working", message: "Leyendo archivo…" });
+  /** Clasifica con IA/reglas y fusiona en el estado (deduplicando por id). */
+  const ingest = useCallback(async (parsed: Omit<Transaction, "category">[], skipped: number, account: string) => {
     try {
-      const parsed: Omit<Transaction, "category">[] = [];
-      let skipped = 0;
-      for (const file of files) {
-        const result = await parseFile(file);
-        parsed.push(...result.transactions.map((t) => ({ ...t, account })));
-        skipped += result.skippedRows;
-      }
-
-      if (parsed.length === 0) {
-        setStatus({
-          kind: "error",
-          message:
-            "No se han podido detectar movimientos en el archivo. Comprueba que tenga columnas de fecha, concepto e importe.",
-        });
-        return;
-      }
-
       setStatus({ kind: "working", message: `Clasificando ${parsed.length} movimientos con IA…` });
 
       let categories: Record<string, string> = {};
@@ -136,6 +137,72 @@ export default function Home() {
     }
   }, []);
 
+  /** Paso 2: con la cuenta elegida, parsear los archivos y delegar en ingest. */
+  const processFiles = useCallback(
+    async (files: File[], account: string) => {
+      setPendingFiles(null);
+      setStatus({ kind: "working", message: "Leyendo archivo…" });
+      try {
+        const parsed: Omit<Transaction, "category">[] = [];
+        let skipped = 0;
+        for (const file of files) {
+          const result = await parseFile(file);
+          parsed.push(...result.transactions.map((t) => ({ ...t, account })));
+          skipped += result.skippedRows;
+        }
+
+        if (parsed.length === 0) {
+          // Detección automática fallida: abrir el importador visual de columnas
+          if (files.length === 1) {
+            const rows = await readFileRows(files[0]);
+            if (rows.length > 0) {
+              setMapper({ rows, fileName: files[0].name, account });
+              setStatus({ kind: "idle" });
+              return;
+            }
+          }
+          setStatus({
+            kind: "error",
+            message:
+              "No se han podido detectar movimientos en el archivo. Comprueba que tenga columnas de fecha, concepto e importe.",
+          });
+          return;
+        }
+
+        await ingest(parsed, skipped, account);
+      } catch (err) {
+        setStatus({
+          kind: "error",
+          message: err instanceof Error ? err.message : "Error al procesar el archivo",
+        });
+      }
+    },
+    [ingest]
+  );
+
+  /** Confirmación del importador visual: parsear con el mapeo elegido. */
+  const handleMapping = useCallback(
+    async (mapping: ManualMapping) => {
+      if (!mapper) return;
+      const { rows, fileName, account } = mapper;
+      setMapper(null);
+      const result = parseWithMapping(rows, fileName, mapping);
+      if (result.transactions.length === 0) {
+        setStatus({
+          kind: "error",
+          message: "Con esas columnas no se ha podido interpretar ningún movimiento.",
+        });
+        return;
+      }
+      await ingest(
+        result.transactions.map((t) => ({ ...t, account })),
+        result.skippedRows,
+        account
+      );
+    },
+    [mapper, ingest]
+  );
+
   const handleAddTransaction = useCallback((tx: Transaction) => {
     setTransactions((prev) => [...prev, tx]);
     setShowAddModal(false);
@@ -144,6 +211,33 @@ export default function Home() {
       message: `Movimiento añadido: ${tx.description} (${tx.account})`,
     });
   }, []);
+
+  const handleUpdateTransaction = useCallback((tx: Transaction) => {
+    setTransactions((prev) => prev.map((t) => (t.id === tx.id ? tx : t)));
+    setEditingTx(null);
+    setStatus({ kind: "ok", message: `Movimiento actualizado: ${tx.description}` });
+  }, []);
+
+  const handleDeleteTransaction = useCallback(
+    (id: string) => {
+      const tx = transactions.find((t) => t.id === id);
+      if (!tx) return;
+      setTransactions((prev) => prev.filter((t) => t.id !== id));
+      void deleteTransaction(id); // también en Supabase, si estaba guardado
+      setStatus({
+        kind: "ok",
+        message: `Movimiento eliminado: ${tx.description}`,
+        undo: () => {
+          setTransactions((prev) => [...prev, tx]);
+          setStatus({
+            kind: "ok",
+            message: "Movimiento restaurado (pulsa Guardar para re-subirlo a Supabase)",
+          });
+        },
+      });
+    },
+    [transactions]
+  );
 
   const handleCategoryChange = useCallback((id: string, category: string) => {
     setTransactions((prev) => prev.map((t) => (t.id === id ? { ...t, category } : t)));
@@ -191,11 +285,24 @@ export default function Home() {
         />
       )}
 
-      {showAddModal && (
+      {(showAddModal || editingTx) && (
         <AddTransactionModal
           accounts={accounts.filter((a) => a !== SIN_CUENTA)}
-          onConfirm={handleAddTransaction}
-          onCancel={() => setShowAddModal(false)}
+          initial={editingTx ?? undefined}
+          onConfirm={editingTx ? handleUpdateTransaction : handleAddTransaction}
+          onCancel={() => {
+            setShowAddModal(false);
+            setEditingTx(null);
+          }}
+        />
+      )}
+
+      {mapper && (
+        <ColumnMapperModal
+          rows={mapper.rows}
+          fileName={mapper.fileName}
+          onConfirm={handleMapping}
+          onCancel={() => setMapper(null)}
         />
       )}
 
@@ -293,7 +400,15 @@ export default function Home() {
               {status.kind === "working" && (
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
               )}
-              {status.message}
+              <span className="min-w-0 flex-1">{status.message}</span>
+              {status.undo && (
+                <button
+                  onClick={status.undo}
+                  className="cursor-pointer whitespace-nowrap rounded-full border border-good/40 px-3 py-1 text-xs font-semibold text-good transition-colors duration-150 hover:bg-good/10"
+                >
+                  Deshacer
+                </button>
+              )}
             </div>
           )}
 
@@ -344,6 +459,8 @@ export default function Home() {
                 transactions={visible}
                 query={query}
                 onCategoryChange={handleCategoryChange}
+                onEdit={setEditingTx}
+                onDelete={handleDeleteTransaction}
               />
               <UploadZone onFiles={handleFiles} compact />
             </div>

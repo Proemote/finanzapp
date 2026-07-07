@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Pencil, Trash2 } from "lucide-react";
 import { formatEUR } from "@/lib/analytics";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "@/lib/categories";
 import type { Transaction } from "@/lib/types";
@@ -9,11 +10,19 @@ interface Props {
   transactions: Transaction[];
   query: string;
   onCategoryChange: (id: string, category: string) => void;
+  onEdit: (transaction: Transaction) => void;
+  onDelete: (id: string) => void;
 }
 
 const PAGE_SIZE = 50;
 
-export default function TransactionsTable({ transactions, query, onCategoryChange }: Props) {
+export default function TransactionsTable({
+  transactions,
+  query,
+  onCategoryChange,
+  onEdit,
+  onDelete,
+}: Props) {
   const [visible, setVisible] = useState(PAGE_SIZE);
 
   const filtered = useMemo(() => {
@@ -50,6 +59,9 @@ export default function TransactionsTable({ transactions, query, onCategoryChang
               <th className="px-5 py-3 font-medium">Cuenta</th>
               <th className="px-5 py-3 font-medium">Fecha</th>
               <th className="px-5 py-3 text-right font-medium">Cantidad</th>
+              <th className="px-3 py-3">
+                <span className="sr-only">Acciones</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -95,11 +107,29 @@ export default function TransactionsTable({ transactions, query, onCategoryChang
                   {t.amount >= 0 ? "+" : ""}
                   {formatEUR(t.amount)}
                 </td>
+                <td className="whitespace-nowrap px-3 py-3">
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      onClick={() => onEdit(t)}
+                      aria-label={`Editar ${t.description}`}
+                      className="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-150 hover:bg-white/[.06] hover:text-foreground"
+                    >
+                      <Pencil className="h-3.5 w-3.5" aria-hidden />
+                    </button>
+                    <button
+                      onClick={() => onDelete(t.id)}
+                      aria-label={`Eliminar ${t.description}`}
+                      className="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-150 hover:bg-bad/15 hover:text-bad"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
             {shown.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-5 py-10 text-center text-sm text-muted">
+                <td colSpan={6} className="px-5 py-10 text-center text-sm text-muted">
                   No hay movimientos que coincidan con la búsqueda.
                 </td>
               </tr>
