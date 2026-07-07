@@ -16,7 +16,7 @@ const NAV = [
   { label: "Dashboard", icon: LayoutDashboard, href: "#dashboard", active: true },
   { label: "Movimientos", icon: ArrowLeftRight, href: "#movimientos", active: false },
   { label: "Analytics", icon: LineChart, href: "#", active: false, soon: true },
-  { label: "Cuentas", icon: Wallet, href: "#", active: false, soon: true },
+  { label: "Cuentas", icon: Wallet, href: "#cuentas", active: false },
 ];
 
 export default function Sidebar({ hasData }: Props) {

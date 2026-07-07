@@ -6,12 +6,14 @@ export interface Transaction {
   /** Positivo = ingreso, negativo = gasto */
   amount: number;
   category: string;
+  /** Cuenta bancaria a la que pertenece (BBVA, Revolut…) */
+  account: string;
   /** Nombre del archivo del que proviene */
   source: string;
 }
 
 export interface ParseResult {
-  transactions: Omit<Transaction, "category">[];
+  transactions: Omit<Transaction, "category" | "account">[];
   /** Filas que no se pudieron interpretar */
   skippedRows: number;
   totalRows: number;
@@ -29,4 +31,12 @@ export interface CategorySummary {
   total: number; // valor absoluto
   count: number;
   percentage: number;
+}
+
+export interface AccountSummary {
+  account: string;
+  income: number;
+  expense: number; // valor positivo
+  balance: number;
+  count: number;
 }

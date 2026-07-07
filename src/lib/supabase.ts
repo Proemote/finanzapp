@@ -22,6 +22,7 @@ export async function saveTransactions(transactions: Transaction[]): Promise<{ e
     description: t.description,
     amount: t.amount,
     category: t.category,
+    account: t.account,
     source: t.source,
   }));
 
@@ -36,9 +37,10 @@ export async function loadTransactions(): Promise<{ data?: Transaction[]; error?
 
   const { data, error } = await supabase
     .from("transactions_mvp")
-    .select("id, date, description, amount, category, source")
+    .select("id, date, description, amount, category, account, source")
     .order("date", { ascending: true });
 
   if (error) return { error: error.message };
-  return { data: (data ?? []) as Transaction[] };
+  const normalized = (data ?? []).map((r) => ({ ...r, account: r.account ?? "" }));
+  return { data: normalized as Transaction[] };
 }

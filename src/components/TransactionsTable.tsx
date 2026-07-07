@@ -21,7 +21,10 @@ export default function TransactionsTable({ transactions, query, onCategoryChang
     const sorted = [...transactions].sort((a, b) => b.date.localeCompare(a.date));
     if (!q) return sorted;
     return sorted.filter(
-      (t) => t.description.toLowerCase().includes(q) || t.category.toLowerCase().includes(q)
+      (t) =>
+        t.description.toLowerCase().includes(q) ||
+        t.category.toLowerCase().includes(q) ||
+        t.account.toLowerCase().includes(q)
     );
   }, [transactions, query]);
 
@@ -44,7 +47,7 @@ export default function TransactionsTable({ transactions, query, onCategoryChang
             <tr className="text-left text-[11px] uppercase tracking-wider text-muted">
               <th className="px-5 py-3 font-medium">Concepto</th>
               <th className="px-5 py-3 font-medium">Categoría</th>
-              <th className="px-5 py-3 font-medium">Origen</th>
+              <th className="px-5 py-3 font-medium">Cuenta</th>
               <th className="px-5 py-3 font-medium">Fecha</th>
               <th className="px-5 py-3 text-right font-medium">Cantidad</th>
             </tr>
@@ -75,8 +78,11 @@ export default function TransactionsTable({ transactions, query, onCategoryChang
                     )}
                   </select>
                 </td>
-                <td className="max-w-40 truncate px-5 py-3 text-xs text-muted" title={t.source}>
-                  {t.source}
+                <td
+                  className="max-w-40 truncate px-5 py-3 text-xs text-secondary"
+                  title={`Archivo: ${t.source}`}
+                >
+                  {t.account || "Sin cuenta"}
                 </td>
                 <td className="whitespace-nowrap px-5 py-3 tabular-nums text-secondary">
                   {t.date}

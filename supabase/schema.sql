@@ -13,9 +13,14 @@ create table if not exists public.transactions_mvp (
   description text not null,
   amount numeric(12, 2) not null,
   category text not null default 'Sin clasificar',
+  account text not null default '',
   source text not null default '',
   created_at timestamptz not null default now()
 );
+
+-- Migración para tablas creadas antes de añadir cuentas bancarias
+alter table public.transactions_mvp
+  add column if not exists account text not null default '';
 
 create index if not exists transactions_mvp_date_idx on public.transactions_mvp (date);
 create index if not exists transactions_mvp_category_idx on public.transactions_mvp (category);

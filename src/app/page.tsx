@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   CloudDownload,
   CloudUpload,
@@ -10,12 +10,14 @@ import {
   Upload,
   Wallet,
 } from "lucide-react";
+import AccountModal from "@/components/AccountModal";
+import AccountsPanel from "@/components/AccountsPanel";
 import ChartsPanel from "@/components/ChartsPanel";
 import Sidebar from "@/components/Sidebar";
 import SummaryCards from "@/components/SummaryCards";
 import TransactionsTable from "@/components/TransactionsTable";
 import UploadZone from "@/components/UploadZone";
-import { monthlySummaries, totals } from "@/lib/analytics";
+import { monthlySummaries, SIN_CUENTA, totals } from "@/lib/analytics";
 import { classifyByRules, defaultCategory, UNCLASSIFIED } from "@/lib/categories";
 import { exportMasterExcel } from "@/lib/export";
 import { parseFile } from "@/lib/parse";
@@ -24,20 +26,44 @@ import type { Transaction } from "@/lib/types";
 
 type Status = { kind: "idle" | "working" | "error" | "ok"; message?: string };
 
+const ALL_ACCOUNTS = "__all__";
+
 export default function Home() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [query, setQuery] = useState("");
+  const [pendingFiles, setPendingFiles] = useState<File[] | null>(null);
+  const [activeAccount, setActiveAccount] = useState(ALL_ACCOUNTS);
   const importRef = useRef<HTMLInputElement>(null);
 
-  const handleFiles = useCallback(async (files: File[]) => {
+  const accounts = useMemo(
+    () => [...new Set(transactions.map((t) => t.account || SIN_CUENTA))].sort(),
+    [transactions]
+  );
+
+  const visible = useMemo(
+    () =>
+      activeAccount === ALL_ACCOUNTS
+        ? transactions
+        : transactions.filter((t) => (t.account || SIN_CUENTA) === activeAccount),
+    [transactions, activeAccount]
+  );
+
+  /** Paso 1: el usuario elige archivos → preguntamos la cuenta. */
+  const handleFiles = useCallback((files: File[]) => {
+    setPendingFiles(files);
+  }, []);
+
+  /** Paso 2: con la cuenta elegida, parsear + clasificar + fusionar. */
+  const processFiles = useCallback(async (files: File[], account: string) => {
+    setPendingFiles(null);
     setStatus({ kind: "working", message: "Leyendo archivo…" });
     try {
       const parsed: Omit<Transaction, "category">[] = [];
       let skipped = 0;
       for (const file of files) {
         const result = await parseFile(file);
-        parsed.push(...result.transactions);
+        parsed.push(...result.transactions.map((t) => ({ ...t, account })));
         skipped += result.skippedRows;
       }
 
@@ -69,10 +95,10 @@ export default function Home() {
         if (!res.ok) throw new Error(`API ${res.status}`);
         const data = await res.json();
         categories = data.categories ?? {};
-        if (!data.aiUsed) {
-          aiNote = data.aiError
-            ? ` (IA no disponible: ${data.aiError}; clasificación por reglas)`
-            : " (clasificado por reglas; añade GEMINI_API_KEY para usar IA)";
+        if (data.aiError) {
+          aiNote = ` (IA no disponible: ${data.aiError}; clasificación por reglas)`;
+        } else if (!data.aiUsed && data.aiPending > 0) {
+          aiNote = " (clasificado por reglas; añade GEMINI_API_KEY para usar IA)";
         }
       } catch {
         for (const t of parsed) {
@@ -91,11 +117,12 @@ export default function Home() {
         const existing = new Set(prev.map((t) => t.id));
         return [...prev, ...classified.filter((t) => !existing.has(t.id))];
       });
+      setActiveAccount(ALL_ACCOUNTS);
 
       const skippedNote = skipped > 0 ? ` · ${skipped} filas omitidas` : "";
       setStatus({
         kind: "ok",
-        message: `${classified.length} movimientos importados${skippedNote}${aiNote}`,
+        message: `${classified.length} movimientos importados en “${account}”${skippedNote}${aiNote}`,
       });
     } catch (err) {
       setStatus({
@@ -127,11 +154,12 @@ export default function Home() {
       return;
     }
     setTransactions(data ?? []);
+    setActiveAccount(ALL_ACCOUNTS);
     setStatus({ kind: "ok", message: `${data?.length ?? 0} movimientos cargados de Supabase` });
   }, []);
 
-  const t = totals(transactions);
-  const months = monthlySummaries(transactions);
+  const t = totals(visible);
+  const months = monthlySummaries(visible);
   const hasData = transactions.length > 0;
 
   const actionBtn =
@@ -140,6 +168,15 @@ export default function Home() {
   return (
     <div className="flex min-h-dvh">
       <Sidebar hasData={hasData} />
+
+      {pendingFiles && (
+        <AccountModal
+          files={pendingFiles}
+          accounts={accounts.filter((a) => a !== SIN_CUENTA)}
+          onConfirm={(account) => processFiles(pendingFiles, account)}
+          onCancel={() => setPendingFiles(null)}
+        />
+      )}
 
       <div className="min-w-0 flex-1">
         {/* Topbar */}
@@ -175,7 +212,7 @@ export default function Home() {
                 multiple
                 className="hidden"
                 onChange={(e) => {
-                  if (e.target.files) handleFiles(Array.from(e.target.files));
+                  if (e.target.files?.length) handleFiles(Array.from(e.target.files));
                   e.target.value = "";
                 }}
               />
@@ -249,10 +286,30 @@ export default function Home() {
             </div>
           ) : (
             <div className="space-y-5">
+              {accounts.length > 1 && (
+                <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrar por cuenta">
+                  {[ALL_ACCOUNTS, ...accounts].map((a) => (
+                    <button
+                      key={a}
+                      onClick={() => setActiveAccount(a)}
+                      aria-pressed={activeAccount === a}
+                      className={`cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium transition-colors duration-150 ${
+                        activeAccount === a
+                          ? "bg-violet-deep text-white"
+                          : "border border-line text-secondary hover:border-line-strong hover:text-foreground"
+                      }`}
+                    >
+                      {a === ALL_ACCOUNTS ? "Todas las cuentas" : a}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <SummaryCards balance={t.balance} months={months} />
-              <ChartsPanel transactions={transactions} />
+              <ChartsPanel transactions={visible} />
+              <AccountsPanel transactions={transactions} />
               <TransactionsTable
-                transactions={transactions}
+                transactions={visible}
                 query={query}
                 onCategoryChange={handleCategoryChange}
               />

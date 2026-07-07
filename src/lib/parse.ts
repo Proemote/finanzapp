@@ -197,7 +197,7 @@ function rowsToTransactions(rows: Row[], source: string): ParseResult {
 
   if (!map) return { transactions: [], skippedRows: rows.length, totalRows: rows.length };
 
-  const transactions: Omit<Transaction, "category">[] = [];
+  const transactions: Omit<Transaction, "category" | "account">[] = [];
   let skipped = 0;
 
   for (let r = startRow; r < rows.length; r++) {

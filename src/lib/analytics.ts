@@ -1,4 +1,27 @@
-import type { CategorySummary, MonthlySummary, Transaction } from "./types";
+import type { AccountSummary, CategorySummary, MonthlySummary, Transaction } from "./types";
+
+export const SIN_CUENTA = "Sin cuenta";
+
+export function accountSummaries(transactions: Transaction[]): AccountSummary[] {
+  const byAccount = new Map<string, { income: number; expense: number; count: number }>();
+  for (const t of transactions) {
+    const account = t.account || SIN_CUENTA;
+    const entry = byAccount.get(account) ?? { income: 0, expense: 0, count: 0 };
+    if (t.amount >= 0) entry.income += t.amount;
+    else entry.expense += -t.amount;
+    entry.count++;
+    byAccount.set(account, entry);
+  }
+  return [...byAccount.entries()]
+    .map(([account, { income, expense, count }]) => ({
+      account,
+      income,
+      expense,
+      balance: income - expense,
+      count,
+    }))
+    .sort((a, b) => b.balance - a.balance);
+}
 
 export function monthlySummaries(transactions: Transaction[]): MonthlySummary[] {
   const byMonth = new Map<string, { income: number; expense: number }>();

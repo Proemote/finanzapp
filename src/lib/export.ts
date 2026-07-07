@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import { categorySummaries, monthlySummaries, totals } from "./analytics";
+import { accountSummaries, categorySummaries, monthlySummaries, totals } from "./analytics";
 import type { Transaction } from "./types";
 
 /**
@@ -55,19 +55,40 @@ export function exportMasterExcel(transactions: Transaction[]) {
   categorySheet["!cols"] = [{ wch: 8 }, { wch: 30 }, { wch: 12 }, { wch: 14 }, { wch: 10 }];
   XLSX.utils.book_append_sheet(workbook, categorySheet, "Categorías");
 
-  // Hoja 3: Movimientos
+  // Hoja 3: Cuentas
+  const accountRows = accountSummaries(transactions).map((a) => ({
+    Cuenta: a.account,
+    Ingresos: round2(a.income),
+    Gastos: round2(a.expense),
+    Balance: round2(a.balance),
+    "Nº movimientos": a.count,
+  }));
+  const accountSheet = XLSX.utils.json_to_sheet(accountRows);
+  accountSheet["!cols"] = [{ wch: 22 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }];
+  XLSX.utils.book_append_sheet(workbook, accountSheet, "Cuentas");
+
+  // Hoja 4: Movimientos
   const txRows = [...transactions]
     .sort((a, b) => a.date.localeCompare(b.date))
     .map((tx) => ({
       Fecha: tx.date,
       Concepto: tx.description,
       Categoría: tx.category,
+      Cuenta: tx.account || "Sin cuenta",
       Importe: round2(tx.amount),
       Tipo: tx.amount >= 0 ? "Ingreso" : "Gasto",
       Origen: tx.source,
     }));
   const txSheet = XLSX.utils.json_to_sheet(txRows);
-  txSheet["!cols"] = [{ wch: 11 }, { wch: 50 }, { wch: 28 }, { wch: 12 }, { wch: 9 }, { wch: 24 }];
+  txSheet["!cols"] = [
+    { wch: 11 },
+    { wch: 50 },
+    { wch: 28 },
+    { wch: 18 },
+    { wch: 12 },
+    { wch: 9 },
+    { wch: 24 },
+  ];
   XLSX.utils.book_append_sheet(workbook, txSheet, "Movimientos");
 
   const today = new Date().toISOString().slice(0, 10);

@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ categories, aiUsed, aiError });
+  return NextResponse.json({ categories, aiUsed, aiError, aiPending: pending.length });
 }
 
 async function classifyWithGemini(
