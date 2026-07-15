@@ -17,6 +17,7 @@ import AddTransactionModal from "@/components/AddTransactionModal";
 import AnalyticsPanel from "@/components/AnalyticsPanel";
 import ChartsPanel from "@/components/ChartsPanel";
 import ColumnMapperModal from "@/components/ColumnMapperModal";
+import RecurringPanel from "@/components/RecurringPanel";
 import Sidebar from "@/components/Sidebar";
 import SummaryCards from "@/components/SummaryCards";
 import TransactionsTable from "@/components/TransactionsTable";
@@ -454,6 +455,7 @@ export default function Home() {
               <SummaryCards balance={t.balance} months={months} />
               <ChartsPanel transactions={visible} />
               <AnalyticsPanel transactions={visible} />
+              <RecurringPanel transactions={visible} />
               <AccountsPanel transactions={transactions} />
               <TransactionsTable
                 transactions={visible}

@@ -4,6 +4,7 @@ import {
   ArrowLeftRight,
   LayoutDashboard,
   LineChart,
+  Repeat,
   Settings,
   Wallet,
 } from "lucide-react";
@@ -24,6 +25,7 @@ const NAV: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, href: "#dashboard", active: true },
   { label: "Movimientos", icon: ArrowLeftRight, href: "#movimientos", active: false },
   { label: "Analytics", icon: LineChart, href: "#analytics", active: false },
+  { label: "Recurrentes", icon: Repeat, href: "#recurrentes", active: false },
   { label: "Cuentas", icon: Wallet, href: "#cuentas", active: false },
 ];
 
