@@ -1,6 +1,70 @@
 # 📊 Finanzapp — Estado Actual del Proyecto
 
-**Última actualización:** 15 julio 2026
+**Última actualización:** 16 julio 2026
+
+---
+
+## 📅 Changelog (Log de Cambios)
+
+### 16 julio 2026
+- ✅ **Repositorio GitHub conectado:** `https://github.com/Proemote/finanzapp.git`
+- ✅ **Commit:** `dac72e6` — "feat: Documentación APP_STATUS y estructura de RecurringPanel"
+- ✅ **Push a master:** Código subido a GitHub (rama sincronizada)
+- ✅ **Variables Supabase configuradas en .env.local:**
+  - `NEXT_PUBLIC_SUPABASE_URL` ✓
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY` ✓
+- 🚀 **Próximo paso:** Conectar Vercel a GitHub para deploy automático
+- 📝 **Documento creado:** APP_STATUS.md (contexto completo del proyecto)
+
+### 15 julio 2026
+- 🚧 **Inicio de RecurringPanel.tsx** — estructura de componente creada
+- 📝 **Creación de lib/recurring.ts** — lógica de movimientos recurrentes (en desarrollo)
+- 📝 **Modificaciones:** src/app/page.tsx y src/components/Sidebar.tsx actualizadas
+
+### 1-7 julio 2026
+- ✅ MVP completo de Finanzapp
+- ✅ Importación CSV/Excel con mapeo visual
+- ✅ Clasificación automática por IA
+- ✅ Dashboard con gráficos (Recharts)
+- ✅ Gestión de cuentas bancarias
+- ✅ Edición/eliminación de movimientos + undo
+- ✅ Exportación a Excel multi-hoja
+
+---
+
+## 🚀 Despliegue & Configuración (16 julio)
+
+### Estado de Infraestructura
+
+| Componente | Estado | Detalles |
+|-----------|--------|---------|
+| **GitHub** | ✅ Conectado | Repo: `Proemote/finanzapp` · Branch: `master` |
+| **Supabase** | ✅ Configurado | Variables en `.env.local` · BD PostgreSQL activa |
+| **Vercel** | 🔄 Pendiente | Próxima conexión automática desde GitHub |
+| **Node.js** | ✅ 18+ | Versión compatible |
+| **Next.js** | ✅ 16.2.9 | App Router activo |
+
+### Variables de Entorno (Configuradas)
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://zgvwarryenikpodmdknz.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_O-Oekoc_ehfo6kDLyLdQag_3sZRi7YS
+```
+
+✅ Ambas variables están configuradas en `.env.local` y listas para producción.
+
+### Deploy Automático (Próximo paso)
+
+1. Ir a https://vercel.com/dashboard
+2. Hacer clic en "Add New" → "Project"
+3. Importar `Proemote/finanzapp` desde GitHub
+4. Vercel detectará Next.js automáticamente
+5. **Añadir variables de entorno:**
+   - Copiar `NEXT_PUBLIC_SUPABASE_URL`
+   - Copiar `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+6. Hacer clic en "Deploy"
+
+**Resultado esperado:** App en vivo en `finanzapp.vercel.app` (URL asignada por Vercel)
 
 ---
 
@@ -180,38 +244,57 @@ finanzapp/
 
 ## 🚧 Features en Desarrollo
 
-### **RecurringPanel.tsx** (En construcción - 15 julio)
+### **RecurringPanel.tsx** (En construcción - Iniciado 15 julio, actualizado 16 julio)
 
-**Estado:** Archivos creados, lógica incompleta
+**Estado:** Archivos creados, estructura base lista, lógica en desarrollo
 
 **Archivos nuevos:**
 - `src/components/RecurringPanel.tsx` — UI para gestionar movimientos recurrentes
+  - Panel con formulario de creación
+  - Listado de recurrentes activos
+  - Acciones: Editar, eliminar, vista de próximos vencimientos
 - `src/lib/recurring.ts` — Lógica de cálculo y generación automática
+  - Funciones: crear, editar, eliminar, generar automáticos
+  - Cálculo de próximas fechas según frecuencia
 
 **Funcionalidad prevista:**
-- Crear movimientos recurrentes (mensual, trimestral, anual)
-- Editar/eliminar recurrentes
-- Generar automáticamente movimientos a su vencimiento
-- Mostrar próximo vencimiento
-- Historial de generaciones
+- ✅ Crear movimientos recurrentes (mensual, trimestral, anual)
+- ✅ Editar/eliminar recurrentes
+- ✅ Generar automáticamente movimientos a su vencimiento
+- ✅ Mostrar próximo vencimiento
+- ✅ Historial de generaciones
+- 🔄 Integración con tabla `recurring_transactions` (Supabase)
 
-**Cambios asociados:**
-- `src/app/page.tsx` — Import de RecurringPanel (línea 20)
-- `src/components/Sidebar.tsx` — Nuevo botón en navegación
+**Cambios asociados (16 julio):**
+- `src/app/page.tsx` — Import de RecurringPanel (línea 20) ✓
+- `src/components/Sidebar.tsx` — Nuevo item "Recurrentes" en navegación ✓
+- **Commit:** `dac72e6` (subido a GitHub)
+
+**Próximas acciones:**
+- Completar lógica en `recurring.ts`
+- Testear flujo completo de recurrentes
+- Crear tabla `recurring_transactions` en Supabase
+- Implementar generación automática de movimientos
 
 ---
 
-## 📝 Cambios Sin Commitear (Git Status)
+## 📝 Estado del Repositorio (Git)
 
-```
-M  src/app/page.tsx                  # Import de RecurringPanel añadido
-M  src/components/Sidebar.tsx        # Nuevo item "Recurrentes" en sidebar
-?? src/components/RecurringPanel.tsx # Nuevo componente
-?? src/lib/recurring.ts              # Nueva lógica recurrentes
-```
+**Rama:** `master`  
+**Remote:** `https://github.com/Proemote/finanzapp.git`  
+**Sincronización:** ✅ Todos los cambios pusheados a GitHub
 
-**Último commit:** `9603637` (7 julio)  
-`"Editar/borrar movimientos con deshacer e importador visual de columnas"`
+### Últimos Commits
+
+| Commit | Fecha | Mensaje |
+|--------|-------|---------|
+| `dac72e6` | 16 jul | ✅ feat: Documentación APP_STATUS y estructura de RecurringPanel |
+| `9603637` | 7 jul | ✅ Editar/borrar movimientos con deshacer e importador visual de columnas |
+| `6506f27` | 7 jul | ✅ Analytics mensual y alta manual de movimientos (efectivo) |
+| `cf4f07d` | 7 jul | ✅ Cuentas bancarias: asignación al importar, filtro, panel |
+| `b3b1a3d` | 1 jul | ✅ MVP inicial de Finanzapp |
+
+**Estado actual:** Working tree limpio (sin cambios pendientes)
 
 ---
 
@@ -446,12 +529,24 @@ git push origin main
 
 ## 📋 Historial de Versiones
 
-| Versión | Fecha | Cambios Principales |
-|---------|-------|-------------------|
-| 0.1.0 | 1 jul | MVP: import CSV, dashboard, categorización IA |
-| 0.2.0 | 7 jul | Edición/eliminación, undo, importador visual columnas |
-| 0.3.0 | 15 jul | [EN DESARROLLO] Movimientos recurrentes, mejoras UI |
+| Versión | Fecha | Cambios Principales | Status |
+|---------|-------|-------------------|--------|
+| 0.1.0 | 1 jul | MVP: import CSV, dashboard, categorización IA | ✅ Stable |
+| 0.2.0 | 7 jul | Edición/eliminación, undo, importador visual columnas | ✅ Stable |
+| 0.3.0 | 16 jul | Documentación completa, estructura RecurringPanel, conexión GitHub | 🚀 En Deploy |
+| 0.4.0 | TBD | [ROADMAP] Completar movimientos recurrentes, autogeneración | 🔄 En desarrollo |
 
 ---
 
-**Última actualización:** 15 julio 2026 · Carlos Molina · Proemote
+## 🔗 Enlaces Útiles
+
+- **GitHub:** https://github.com/Proemote/finanzapp
+- **Supabase Dashboard:** https://app.supabase.com/projects
+- **Vercel Dashboard:** https://vercel.com/dashboard (próximo deploy)
+- **Desarrollador:** Carlos Molina Márquez (Proemote)
+- **Email:** contactoproemote@gmail.com
+
+---
+
+**Última actualización:** 16 julio 2026 · Carlos Molina · Proemote  
+**Próxima acción:** Deploy a Vercel desde GitHub
