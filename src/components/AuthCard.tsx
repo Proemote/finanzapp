@@ -280,13 +280,19 @@ const AuthCard = () => {
 
       if (error) {
         setError(error.message || "Error al iniciar sesión");
-      } else if (data.session) {
+        console.error("Login error:", error);
+      } else if (data?.session) {
         // La sesión se ha establecido correctamente
+        console.log("Login exitoso, navegando...");
         await new Promise(resolve => setTimeout(resolve, 500));
         router.push("/");
+      } else {
+        setError("No se pudo establecer la sesión. Verifica que hayas confirmado tu email.");
+        console.error("No session data:", data);
       }
     } catch (err) {
       setError("Error inesperado. Intenta más tarde.");
+      console.error("Catch error:", err);
     } finally {
       setIsLoading(false);
     }
