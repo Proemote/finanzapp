@@ -12,6 +12,16 @@
   - Solución: regex mejorada que elimina letras de moneda al inicio y final
   - Prueba: imagin 2025-2026.csv se importa correctamente
   - Commit: `02b0010` — "fix: parseAmount ahora elimina códigos de moneda"
+- ✅ **Sistema de Autenticación Supabase + Login UI**
+  - Componente SignIn con diseño moderno (gradient, canvas animado, google oauth)
+  - Autenticación con email/contraseña + Google OAuth
+  - Página de Recuperar Contraseña ("¿Olvidaste tu contraseña?")
+  - Middleware de protección de rutas (redirige a login si no autenticado)
+  - Hook useAuth para manejo de sesiones
+  - Instaladas dependencias: framer-motion, @supabase/ssr, react-is
+  - Rutas públicas: /login, /forgot-password
+  - Rutas protegidas: / (dashboard), /accounts, /analytics, etc.
+  - Commit: `b6054f8` — "feat: Sistema de autenticación con Supabase + login UI"
 
 ### 16 julio 2026
 - ✅ **Repositorio GitHub conectado:** `https://github.com/Proemote/finanzapp.git`
