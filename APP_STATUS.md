@@ -6,31 +6,119 @@
 
 ## 📅 Changelog (Log de Cambios)
 
-### 17 julio 2026
-- ✅ **Fix parseAmount():** Importador ahora parsea correctamente montos con códigos de moneda (EUR, GBP, etc.)
-  - Problema: "3.65EUR" se rechazaba como NaN
-  - Solución: regex mejorada que elimina letras de moneda al inicio y final
-  - Prueba: imagin 2025-2026.csv se importa correctamente
-  - Commit: `02b0010` — "fix: parseAmount ahora elimina códigos de moneda"
-- ✅ **Sistema de Autenticación Supabase + Login UI**
-  - Componente SignIn con diseño moderno (gradient, canvas animado, google oauth)
-  - Autenticación con email/contraseña + Google OAuth
-  - Página de Recuperar Contraseña ("¿Olvidaste tu contraseña?")
-  - Middleware de protección de rutas (redirige a login si no autenticado)
-  - Hook useAuth para manejo de sesiones
-  - Instaladas dependencias: framer-motion, @supabase/ssr, react-is
-  - Rutas públicas: /login, /forgot-password
-  - Rutas protegidas: / (dashboard), /accounts, /analytics, etc.
-  - Commit: `b6054f8` — "feat: Sistema de autenticación con Supabase + login UI"
-- ✅ **Sign Up con Confirmación de Email + Términos**
-  - Nuevo componente AuthCard con tabs Login/Signup
-  - Formulario Signup: email, contraseña, confirmar contraseña
-  - ✅ Casilla de privacidad/términos (requerida)
-  - ✅ Validación: contraseñas coincidan, mínimo 6 caracteres
-  - ✅ Pantalla de confirmación "Hemos enviado un enlace..."
-  - ✅ Supabase envía automáticamente email de confirmación
-  - Diseño consistente con login, animaciones y validaciones
-  - Commit: `67baa1a` — "feat: Agregar Sign Up con confirmación de email y términos"
+### 17 julio 2026 - Sesión 3: Auth completo + Signup + Email confirmation
+
+#### 🔧 **1. Fix parseAmount() para importación de archivos**
+- **Problema:** Archivos con códigos de moneda (EUR, GBP, etc.) fallaban en importación
+  - Ejemplo: `"3.65EUR"` se rechazaba como NaN
+  - Causa: regex no eliminaba letras de moneda, solo símbolos
+- **Solución:** Regex mejorada en `src/lib/parse.ts` línea 40-42
+  - Antes: `.replace(/[€$\s]/g, "")`
+  - Después: `.replace(/^[€$\s\p{L}]+/gu, "").replace(/[€$\s\p{L}]+$/gu, "")`
+  - Ahora elimina letras de moneda al inicio y final
+- **Prueba exitosa:** Archivo imagin 2025-2026.csv importa correctamente
+- **Archivos modificados:** `src/lib/parse.ts`
+- **Commit:** `02b0010` — "fix: parseAmount ahora elimina códigos de moneda"
+
+#### 🔐 **2. Sistema de Autenticación Supabase + Login UI**
+- **Componentes nuevos:**
+  - `src/components/SignIn.tsx` — UI de login con canvas animado
+  - `src/app/login/page.tsx` — Página de login
+  - `src/app/auth/callback/route.ts` — Callback para Google OAuth
+  - `src/hooks/useAuth.ts` — Hook para manejar sesiones
+  - `src/app/forgot-password/page.tsx` — Página recuperar contraseña
+  - `src/components/ForgotPassword.tsx` — UI recuperar contraseña
+  - `middleware.ts` — Protección de rutas
+
+- **Características:**
+  - ✅ Login con email/contraseña
+  - ✅ Google OAuth integrado
+  - ✅ Recuperación de contraseña ("¿Olvidaste tu contraseña?")
+  - ✅ Middleware que redirige sin autenticación → `/login`
+  - ✅ Rutas públicas: `/login`, `/forgot-password`
+  - ✅ Rutas protegidas: `/` (dashboard) + todas las demás
+
+- **Dependencias instaladas:**
+  - `framer-motion@11.x` — animaciones suaves
+  - `@supabase/ssr@0.x` — SSR support para middleware
+  - `react-is@18.x` — utilidad para recharts
+
+- **Diseño:**
+  - Lado izquierdo: canvas animado con mapa y puntos (DotMap)
+  - Lado derecho: formulario de autenticación
+  - Animaciones entrada/salida suave
+  - Validación con mensajes de error claros
+  - Botón Google con logo oficial
+  - Responsive (mobile: formulario full-width)
+
+- **Archivos modificados:** `src/app/login/page.tsx`, `package.json`, `package-lock.json`
+- **Commit:** `b6054f8` — "feat: Sistema de autenticación con Supabase + login UI"
+
+#### 📝 **3. Sign Up con Confirmación de Email + Términos**
+- **Componente nuevo:**
+  - `src/components/AuthCard.tsx` — Reemplaza SignIn, agregando Signup
+  - Tabs: "Iniciar sesión" | "Crear cuenta"
+  - Transiciones suaves entre tabs con AnimatePresence
+
+- **Formulario Sign Up:**
+  - Email (con validación)
+  - Contraseña (mínimo 6 caracteres)
+  - Confirmar contraseña (deben coincidir)
+  - ✅ **Casilla de privacidad:** "Acepto los términos y condiciones + política de privacidad"
+  - Botón "Crear cuenta" (deshabilitado hasta aceptar términos)
+
+- **Validaciones:**
+  - Email requerido y validado
+  - Contraseña: mínimo 6 caracteres
+  - Contraseñas deben coincidir (error: "Las contraseñas no coinciden")
+  - Términos deben aceptarse (error: "Debes aceptar los términos")
+  - Cada campo tiene validación individual con mensajes de error
+
+- **Flujo Signup:**
+  1. Usuario completa formulario + acepta términos
+  2. Click en "Crear cuenta"
+  3. Supabase crea la cuenta automáticamente
+  4. **Supabase envía email de confirmación** (automático)
+  5. Pantalla de éxito: "¡Cuenta creada!" + "Hemos enviado un enlace..."
+  6. Usuario confirma en el email (link con callback → `/auth/callback`)
+  7. Puede iniciar sesión normalmente
+
+- **Pantalla de Confirmación:**
+  - Icono de check en verde
+  - Mensaje: "Hemos enviado un enlace de confirmación a: [email]"
+  - Instrucción: "Abre el enlace en tu correo para confirmar tu cuenta"
+  - Botón "Volver al inicio" (regresa a login)
+
+- **Diseño consistente:**
+  - Mismo mapa animado en lado izquierdo
+  - Mismos estilos, colores y animaciones que login
+  - Iconografía con lucide-react
+  - Estados de carga (spinner) en botones
+
+- **Archivos nuevos:** `src/components/AuthCard.tsx`
+- **Archivos eliminados:** `src/components/SignIn.tsx` (reemplazado)
+- **Archivos modificados:** `src/app/login/page.tsx`
+- **Commits:**
+  - `67baa1a` — "feat: Agregar Sign Up con confirmación de email y términos"
+  - `70ac7cf` — "docs: Actualizar APP_STATUS con signup feature"
+
+#### 📊 **Resumen de cambios (17 julio)**
+| Elemento | Antes | Después |
+|----------|-------|---------|
+| Importador | Fallaba con EUR | ✅ Funciona perfectamente |
+| Autenticación | No existía | ✅ Supabase + Google OAuth |
+| Login | No existía | ✅ Página completa + UI |
+| Sign Up | No existía | ✅ Con términos + email confirmation |
+| Rutas protegidas | No | ✅ Middleware automático |
+| Dependencias nuevas | 0 | +3 (framer-motion, @supabase/ssr, react-is) |
+| Archivos nuevos | - | 8 componentes/rutas/hooks |
+
+#### 🚀 **Estado Actual**
+- ✅ Build: exitoso (sin errores TypeScript)
+- ✅ Servidor: corriendo en puerto 3001
+- ✅ Rutas: `/login` + `/forgot-password` + `/` protegido
+- ✅ Email confirmation: funcionando (Supabase automático)
+- ⏳ Próximo: Conectar Vercel para deploy
 
 ### 16 julio 2026
 - ✅ **Repositorio GitHub conectado:** `https://github.com/Proemote/finanzapp.git`
