@@ -273,14 +273,16 @@ const AuthCard = () => {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error, data } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
         setError(error.message || "Error al iniciar sesión");
-      } else {
+      } else if (data.session) {
+        // La sesión se ha establecido correctamente
+        await new Promise(resolve => setTimeout(resolve, 500));
         router.push("/");
       }
     } catch (err) {
