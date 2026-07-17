@@ -22,6 +22,15 @@
   - Rutas públicas: /login, /forgot-password
   - Rutas protegidas: / (dashboard), /accounts, /analytics, etc.
   - Commit: `b6054f8` — "feat: Sistema de autenticación con Supabase + login UI"
+- ✅ **Sign Up con Confirmación de Email + Términos**
+  - Nuevo componente AuthCard con tabs Login/Signup
+  - Formulario Signup: email, contraseña, confirmar contraseña
+  - ✅ Casilla de privacidad/términos (requerida)
+  - ✅ Validación: contraseñas coincidan, mínimo 6 caracteres
+  - ✅ Pantalla de confirmación "Hemos enviado un enlace..."
+  - ✅ Supabase envía automáticamente email de confirmación
+  - Diseño consistente con login, animaciones y validaciones
+  - Commit: `67baa1a` — "feat: Agregar Sign Up con confirmación de email y términos"
 
 ### 16 julio 2026
 - ✅ **Repositorio GitHub conectado:** `https://github.com/Proemote/finanzapp.git`
