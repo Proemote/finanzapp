@@ -37,7 +37,10 @@ export function parseAmount(value: Cell): number | null {
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
   if (value instanceof Date || typeof value === "boolean") return null;
 
-  let s = String(value).trim().replace(/[€$\s]/g, "");
+  let s = String(value)
+    .trim()
+    .replace(/^[€$\s\p{L}]+/gu, "")
+    .replace(/[€$\s\p{L}]+$/gu, "");
   if (!s) return null;
 
   let negative = false;
