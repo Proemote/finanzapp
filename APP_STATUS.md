@@ -1,10 +1,17 @@
 # 📊 Finanzapp — Estado Actual del Proyecto
 
-**Última actualización:** 16 julio 2026
+**Última actualización:** 17 julio 2026
 
 ---
 
 ## 📅 Changelog (Log de Cambios)
+
+### 17 julio 2026
+- ✅ **Fix parseAmount():** Importador ahora parsea correctamente montos con códigos de moneda (EUR, GBP, etc.)
+  - Problema: "3.65EUR" se rechazaba como NaN
+  - Solución: regex mejorada que elimina letras de moneda al inicio y final
+  - Prueba: imagin 2025-2026.csv se importa correctamente
+  - Commit: `02b0010` — "fix: parseAmount ahora elimina códigos de moneda"
 
 ### 16 julio 2026
 - ✅ **Repositorio GitHub conectado:** `https://github.com/Proemote/finanzapp.git`
