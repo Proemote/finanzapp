@@ -1,14 +1,14 @@
-import SignInCard from "@/components/SignIn";
+import AuthCard from "@/components/AuthCard";
 
 export const metadata = {
-  title: "Iniciar Sesión - Finanzapp",
-  description: "Inicia sesión en tu cuenta de Finanzapp",
+  title: "Autenticación - Finanzapp",
+  description: "Inicia sesión o crea una cuenta en Finanzapp",
 };
 
 export default function LoginPage() {
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <SignInCard />
+      <AuthCard />
     </div>
   );
 }
