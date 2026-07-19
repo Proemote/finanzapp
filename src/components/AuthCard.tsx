@@ -4,7 +4,7 @@ import React, { useRef, useEffect, useState } from "react";
 import { Eye, EyeOff, ArrowRight, ArrowLeft, Loader2, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase-browser";
 import { useRouter } from "next/navigation";
 
 const cn = (...classes: string[]) => {
@@ -232,10 +232,7 @@ const DotMap = () => {
   );
 };
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-);
+const supabase = createClient();
 
 const AuthCard = () => {
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -280,15 +277,11 @@ const AuthCard = () => {
 
       if (error) {
         setError(error.message || "Error al iniciar sesión");
-        console.error("Login error:", error);
       } else if (data?.session) {
-        // La sesión se ha establecido correctamente
-        console.log("Login exitoso, navegando...");
-        await new Promise(resolve => setTimeout(resolve, 500));
         router.push("/");
+        router.refresh();
       } else {
         setError("No se pudo establecer la sesión. Verifica que hayas confirmado tu email.");
-        console.error("No session data:", data);
       }
     } catch (err) {
       setError("Error inesperado. Intenta más tarde.");
