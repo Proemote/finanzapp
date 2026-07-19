@@ -232,6 +232,11 @@ const DotMap = () => {
   );
 };
 
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+);
+
 const AuthCard = () => {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -249,11 +254,6 @@ const AuthCard = () => {
   const [termsError, setTermsError] = useState<string>("");
   const [success, setSuccess] = useState(false);
   const router = useRouter();
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-  );
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
