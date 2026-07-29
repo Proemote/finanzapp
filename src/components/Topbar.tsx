@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { Search, Upload, Wallet } from "lucide-react";
+import ThemeToggle from "@/components/ThemeToggle";
 import { useFinanzapp } from "@/context/finanzapp-context";
 
 export default function Topbar() {
@@ -31,6 +32,7 @@ export default function Topbar() {
         </label>
 
         <div className="ml-auto flex items-center gap-2">
+          <ThemeToggle />
           <input
             ref={importRef}
             type="file"

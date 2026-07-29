@@ -65,7 +65,7 @@ export default function RecurringPanel({ transactions }: Props) {
                 <tr key={s.key} className="border-t border-line">
                   <td className="px-3 py-2.5">
                     <div className="flex items-center gap-2">
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet/15 text-violet">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-violet/15 text-violet">
                         <Repeat className="h-3.5 w-3.5" aria-hidden />
                       </span>
                       <div className="min-w-0">

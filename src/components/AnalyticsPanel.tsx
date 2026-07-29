@@ -115,7 +115,7 @@ export default function AnalyticsPanel({ transactions }: Props) {
                   className={`cursor-pointer border-t border-line transition-colors duration-150 ${
                     m.month === selectedMonth
                       ? "bg-violet/10"
-                      : "hover:bg-white/[.02]"
+                      : "hover:bg-foreground/[.04]"
                   }`}
                 >
                   <td className="whitespace-nowrap px-3 py-2.5 font-medium capitalize">

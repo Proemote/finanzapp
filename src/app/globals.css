@@ -1,11 +1,15 @@
 @import "tailwindcss";
 
 /*
- * Finanzapp — tema "premium finance" (oscuro fijo).
- * Paleta: gris carbón oscuro + acento morado (referencia estilo Cryptoin).
- * Verde/rojo reservados para positivo/negativo. Sin degradados multicolor.
+ * Finanzapp — tema "soft finance" con acento morado.
+ * Soporta claro/oscuro vía [data-theme] en <html> (ver ThemeToggle.tsx),
+ * con fallback a prefers-color-scheme mientras no haya elección guardada.
+ * Verde/rojo reservados para positivo/negativo. El donut de categorías usa
+ * una paleta categórica propia (--chart-1..6) validada para daltonismo.
  */
 :root {
+  color-scheme: dark;
+
   --background: #131118;
   --foreground: #f5f4f8;
 
@@ -23,11 +27,144 @@
   --good: #4ade80;
   --bad: #f87171;
 
-  /* Data viz */
+  /* Data viz — series semánticas (ingreso/gasto) */
   --viz-income: #a78bfa;
   --viz-expense: #f87171;
   --viz-grid: rgba(255, 255, 255, 0.06);
   --viz-axis: #6e6a7c;
+
+  /* Data viz — paleta categórica (donut de categorías), morado líder */
+  --chart-1: #9085e9;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
+  --chart-6: #3987e5;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.24), 0 12px 32px -10px rgba(139, 92, 246, 0.18);
+  --shadow-card-lg: 0 1px 2px rgba(0, 0, 0, 0.3), 0 24px 48px -14px rgba(139, 92, 246, 0.32);
+  --gradient-bg: radial-gradient(1100px circle at 12% -10%, rgba(139, 92, 246, 0.16), transparent 60%),
+    radial-gradient(900px circle at 105% 15%, rgba(167, 139, 250, 0.12), transparent 55%),
+    radial-gradient(800px circle at 50% 120%, rgba(139, 92, 246, 0.1), transparent 60%);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:where(:not([data-theme="dark"])) {
+    color-scheme: light;
+
+    --background: #f6f4fb;
+    --foreground: #1e1b29;
+
+    --surface: #ffffff;
+    --surface-2: #f3f0fa;
+    --border: rgba(30, 27, 41, 0.08);
+    --border-strong: rgba(30, 27, 41, 0.16);
+
+    --text-secondary: #57516d;
+    --text-muted: #8783a0;
+
+    --violet: #7c3aed;
+    --violet-deep: #6d28d9;
+
+    --good: #16a34a;
+    --bad: #dc2626;
+
+    --viz-income: #7c3aed;
+    --viz-expense: #dc2626;
+    --viz-grid: rgba(30, 27, 41, 0.07);
+    --viz-axis: #8783a0;
+
+    --chart-1: #4a3aa7;
+    --chart-2: #eb6834;
+    --chart-3: #1baf7a;
+    --chart-4: #eda100;
+    --chart-5: #e87ba4;
+    --chart-6: #2a78d6;
+
+    --shadow-card: 0 1px 2px rgba(30, 27, 41, 0.04), 0 12px 28px -10px rgba(109, 40, 217, 0.14);
+    --shadow-card-lg: 0 1px 2px rgba(30, 27, 41, 0.05), 0 24px 44px -14px rgba(109, 40, 217, 0.22);
+    --gradient-bg: radial-gradient(1100px circle at 12% -10%, rgba(124, 58, 237, 0.1), transparent 60%),
+      radial-gradient(900px circle at 105% 10%, rgba(167, 139, 250, 0.16), transparent 55%),
+      radial-gradient(800px circle at 50% 120%, rgba(109, 40, 217, 0.06), transparent 60%);
+  }
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --background: #f6f4fb;
+  --foreground: #1e1b29;
+
+  --surface: #ffffff;
+  --surface-2: #f3f0fa;
+  --border: rgba(30, 27, 41, 0.08);
+  --border-strong: rgba(30, 27, 41, 0.16);
+
+  --text-secondary: #57516d;
+  --text-muted: #8783a0;
+
+  --violet: #7c3aed;
+  --violet-deep: #6d28d9;
+
+  --good: #16a34a;
+  --bad: #dc2626;
+
+  --viz-income: #7c3aed;
+  --viz-expense: #dc2626;
+  --viz-grid: rgba(30, 27, 41, 0.07);
+  --viz-axis: #8783a0;
+
+  --chart-1: #4a3aa7;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-4: #eda100;
+  --chart-5: #e87ba4;
+  --chart-6: #2a78d6;
+
+  --shadow-card: 0 1px 2px rgba(30, 27, 41, 0.04), 0 12px 28px -10px rgba(109, 40, 217, 0.14);
+  --shadow-card-lg: 0 1px 2px rgba(30, 27, 41, 0.05), 0 24px 44px -14px rgba(109, 40, 217, 0.22);
+  --gradient-bg: radial-gradient(1100px circle at 12% -10%, rgba(124, 58, 237, 0.1), transparent 60%),
+    radial-gradient(900px circle at 105% 10%, rgba(167, 139, 250, 0.16), transparent 55%),
+    radial-gradient(800px circle at 50% 120%, rgba(109, 40, 217, 0.06), transparent 60%);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --background: #131118;
+  --foreground: #f5f4f8;
+
+  --surface: #1b1823;
+  --surface-2: #242030;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.14);
+
+  --text-secondary: #a5a1b3;
+  --text-muted: #6e6a7c;
+
+  --violet: #a78bfa;
+  --violet-deep: #8b5cf6;
+
+  --good: #4ade80;
+  --bad: #f87171;
+
+  --viz-income: #a78bfa;
+  --viz-expense: #f87171;
+  --viz-grid: rgba(255, 255, 255, 0.06);
+  --viz-axis: #6e6a7c;
+
+  --chart-1: #9085e9;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
+  --chart-6: #3987e5;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.24), 0 12px 32px -10px rgba(139, 92, 246, 0.18);
+  --shadow-card-lg: 0 1px 2px rgba(0, 0, 0, 0.3), 0 24px 48px -14px rgba(139, 92, 246, 0.32);
+  --gradient-bg: radial-gradient(1100px circle at 12% -10%, rgba(139, 92, 246, 0.16), transparent 60%),
+    radial-gradient(900px circle at 105% 15%, rgba(167, 139, 250, 0.12), transparent 55%),
+    radial-gradient(800px circle at 50% 120%, rgba(139, 92, 246, 0.1), transparent 60%);
 }
 
 @theme inline {
@@ -48,16 +185,27 @@
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
+  background-image: var(--gradient-bg);
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  transition: background-color 200ms ease, color 200ms ease;
 }
 
-/* Tarjeta base */
+/* Tarjeta base — soft UI: bordes redondeados, sombra suave tintada de morado */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 1rem;
+  border-radius: 1.25rem;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 200ms ease, border-color 200ms ease, background-color 200ms ease;
+}
+
+/* Variante para paneles destacados (ChartsPanel glow=true) */
+.card-glow {
+  box-shadow: var(--shadow-card-lg);
+  border-color: var(--border-strong);
 }
 
 ::selection {

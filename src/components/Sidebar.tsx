@@ -50,10 +50,10 @@ export default function Sidebar() {
               key={label}
               href={href}
               aria-current={active ? "page" : undefined}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200 ${
+              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-200 ${
                 active
                   ? "border border-violet/40 bg-violet-deep/25 text-foreground"
-                  : "cursor-pointer text-secondary hover:bg-white/[.04] hover:text-foreground"
+                  : "cursor-pointer text-secondary hover:bg-foreground/[.06] hover:text-foreground"
               }`}
             >
               <Icon className="h-4 w-4" aria-hidden />
@@ -64,7 +64,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="border-t border-line px-3 py-4">
-        <span className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted">
+        <span className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted">
           <Settings className="h-4 w-4" aria-hidden />
           Configuración
           <span className="ml-auto rounded-full border border-line px-2 py-0.5 text-[10px]">

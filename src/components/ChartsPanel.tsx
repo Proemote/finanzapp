@@ -23,8 +23,15 @@ interface Props {
 
 const AXIS_STYLE = { fontSize: 11, fill: "var(--viz-axis)" };
 
-/** Paleta categórica para el donut: escala de morados. */
-const DONUT_COLORS = ["#8b5cf6", "#ddd6fe", "#6d28d9", "#a78bfa", "#4c1d95", "#c4b5fd"];
+/** Paleta categórica para el donut: morado líder + 5 tonos distinguibles (validada CVD). */
+const DONUT_COLORS = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+  "var(--chart-6)",
+];
 
 function Panel({
   title,
@@ -40,7 +47,7 @@ function Panel({
   glow?: boolean;
 }) {
   return (
-    <section className={`card p-5 ${className}`}>
+    <section className={`card p-5 ${glow ? "card-glow" : ""} ${className}`}>
       <h3 className="text-base font-semibold">{title}</h3>
       {subtitle && <p className="mt-0.5 text-xs text-muted">{subtitle}</p>}
       <div className="mt-4">{children}</div>
@@ -205,19 +212,32 @@ export default function ChartsPanel({ transactions }: Props) {
             <p className="text-xl font-bold">{formatEUR(totalExpense)}</p>
           </div>
         </div>
-        <ul className="mt-3 space-y-1.5 text-xs">
-          {donutData.map((c, i) => (
-            <li key={c.category} className="flex items-center gap-2 text-secondary">
-              <span
-                className="h-2 w-2 shrink-0 rounded-full"
-                style={{ backgroundColor: DONUT_COLORS[i % DONUT_COLORS.length] }}
-              />
-              <span className="truncate">{c.category}</span>
-              <span className="ml-auto font-medium tabular-nums text-foreground">
-                {formatEUR(c.total)}
-              </span>
-            </li>
-          ))}
+        <ul className="mt-4 space-y-2.5">
+          {donutData.map((c, i) => {
+            const color = DONUT_COLORS[i % DONUT_COLORS.length];
+            const pct = totalExpense > 0 ? (c.total / totalExpense) * 100 : 0;
+            return (
+              <li key={c.category} className="text-xs">
+                <div className="flex items-center gap-2 text-secondary">
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: color }}
+                  />
+                  <span className="truncate">{c.category}</span>
+                  <span className="ml-auto shrink-0 tabular-nums text-muted">{pct.toFixed(0)}%</span>
+                  <span className="w-16 shrink-0 text-right font-medium tabular-nums text-foreground">
+                    {formatEUR(c.total)}
+                  </span>
+                </div>
+                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-2">
+                  <div
+                    className="h-full rounded-full transition-[width] duration-300"
+                    style={{ width: `${Math.max(pct, 2)}%`, backgroundColor: color }}
+                  />
+                </div>
+              </li>
+            );
+          })}
         </ul>
       </Panel>
 

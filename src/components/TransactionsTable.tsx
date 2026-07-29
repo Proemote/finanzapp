@@ -68,7 +68,7 @@ export default function TransactionsTable({
             {shown.map((t) => (
               <tr
                 key={t.id}
-                className="border-t border-line transition-colors duration-150 hover:bg-white/[.02]"
+                className="border-t border-line transition-colors duration-150 hover:bg-foreground/[.04]"
               >
                 <td className="max-w-sm truncate px-5 py-3 font-medium" title={t.description}>
                   {t.description}
@@ -112,7 +112,7 @@ export default function TransactionsTable({
                     <button
                       onClick={() => onEdit(t)}
                       aria-label={`Editar ${t.description}`}
-                      className="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-150 hover:bg-white/[.06] hover:text-foreground"
+                      className="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-150 hover:bg-foreground/[.08] hover:text-foreground"
                     >
                       <Pencil className="h-3.5 w-3.5" aria-hidden />
                     </button>

@@ -64,7 +64,7 @@ export default function SummaryCards({ balance, months }: Props) {
           <div className="flex items-start justify-between gap-3">
             <p className="text-sm text-secondary">{label}</p>
             <span
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${chip}`}
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${chip}`}
             >
               <Icon className="h-4 w-4" aria-hidden />
             </span>

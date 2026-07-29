@@ -102,7 +102,7 @@ export default function AddTransactionModal({ accounts, initial, onConfirm, onCa
           <button
             onClick={onCancel}
             aria-label="Cerrar"
-            className="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-150 hover:bg-white/[.06] hover:text-foreground"
+            className="cursor-pointer rounded-lg p-1.5 text-muted transition-colors duration-150 hover:bg-foreground/[.08] hover:text-foreground"
           >
             <X className="h-4 w-4" aria-hidden />
           </button>

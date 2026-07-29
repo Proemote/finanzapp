@@ -34,7 +34,7 @@ export default function UploadZone({ onFiles, compact = false }: Props) {
       className={`cursor-pointer rounded-2xl border-2 border-dashed text-center transition-colors duration-200 ${
         dragging
           ? "border-violet bg-violet/10"
-          : "border-line-strong hover:border-violet/60 hover:bg-white/[.02]"
+          : "border-line-strong hover:border-violet/60 hover:bg-foreground/[.04]"
       } ${compact ? "p-4" : "p-14"}`}
     >
       <input

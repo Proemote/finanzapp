@@ -62,7 +62,7 @@ export default function ControlBar() {
             </button>
             <button
               onClick={handleExport}
-              className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#131118] transition-opacity duration-150 hover:opacity-85"
+              className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-violet-deep px-4 py-2 text-sm font-semibold text-white transition-opacity duration-150 hover:opacity-90"
             >
               <Download className="h-4 w-4" aria-hidden />
               Exportar Excel
