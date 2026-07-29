@@ -1,10 +1,51 @@
 # 📊 Finanzapp — Estado Actual del Proyecto
 
-**Última actualización:** 17 julio 2026
+**Última actualización:** 29 julio 2026
 
 ---
 
 ## 📅 Changelog (Log de Cambios)
+
+### 29 julio 2026 - Sesión 4: Fix IA, rutas reales, Excel rediseñado, modo claro/oscuro
+
+#### 🔑 **1. Fix clasificación IA (Gemini 401)**
+- **Problema:** al clasificar movimientos, la IA fallaba con `Gemini 401: Request had invalid authentication credentials`
+- **Causa:** `GEMINI_API_KEY` en `.env.local` no tenía formato de API key válida (caducada/mal copiada)
+- **Solución:** generada key nueva desde Google AI Studio, actualizada en `.env.local` y en Vercel (Production + Preview), redeploy y verificado con llamada real a `/api/classify` (`aiUsed: true`)
+
+#### 🧭 **2. Menú con rutas reales (antes anclas en una sola página)**
+- **Antes:** Dashboard/Movimientos/Analytics/Recurrentes/Cuentas eran secciones `#ancla` dentro de `src/app/page.tsx`
+- **Ahora:** rutas Next.js independientes bajo `src/app/(app)/` — `/`, `/movimientos`, `/analytics`, `/recurrentes`, `/cuentas` — cada una con su propio archivo `page.tsx`
+- **Estado compartido:** nuevo `src/context/finanzapp-context.tsx` (`FinanzappProvider`/`useFinanzapp`) en `src/app/(app)/layout.tsx`, para que navegar entre secciones no pierda los movimientos cargados
+- **Componentes nuevos:** `Topbar.tsx` (búsqueda + import), `ControlBar.tsx` (acciones globales + banner de estado + filtro de cuentas), `EmptyState.tsx`
+- **Eliminado:** `src/app/page.tsx` (lógica movida al layout + context)
+- **Archivos:** `src/app/(app)/*`, `src/context/finanzapp-context.tsx`, `src/components/{Topbar,ControlBar,EmptyState,Sidebar}.tsx`
+
+#### 📊 **3. Excel maestro rediseñado con `exceljs`**
+- **Problema:** `xlsx` (SheetJS free) no permite aplicar estilos; el Excel exportado era texto plano sin formato
+- **Solución:** reescrito `src/lib/export.ts` con `exceljs` — cabecera azul marino con texto blanco, filas TOTAL en salmón, movimientos agrupados por mes, formato de moneda y colores por ingreso/gasto, cabecera congelada
+- **Referencia de estilo:** cuadrante contable de Carlos (adaptado a los campos reales de Finanzapp, sin IVA/retención/proveedor)
+- **Dependencia nueva:** `exceljs`
+
+#### 🎨 **4. Rediseño visual soft UI + modo claro/oscuro**
+- **Antes:** tema oscuro fijo (`:root` único en `globals.css`), sin modo claro
+- **Ahora:** tokens de tema completos para claro y oscuro vía `[data-theme]` en `<html>`, con fallback a `prefers-color-scheme`
+- **Toggle:** `src/components/ThemeToggle.tsx` en el Topbar, persistido en `localStorage`, sin flash de tema incorrecto (script inline en `layout.tsx` + `suppressHydrationWarning`)
+- **Estilo:** fondo con degradado violeta sutil, tarjetas más redondeadas (20px) con sombra suave tintada de morado, chips de icono más suaves, barras de progreso por categoría (donut de gastos) y por cuenta
+- **Paleta del donut:** antes escala de morados sobre morado (poco distinguible); ahora paleta categórica con morado líder + 5 tonos, validada contra daltonismo (skill `dataviz`, `scripts/validate_palette.js`) — `--chart-1..6` en `globals.css`
+- **Fix cross-tema:** varios `hover:bg-white/[...]` (invisibles en modo claro) cambiados a `hover:bg-foreground/[...]`, y el botón "Exportar Excel" (blanco/negro fijo) pasó a morado sólido de marca
+- **Archivos:** `src/app/globals.css`, `src/app/layout.tsx`, `src/components/ThemeToggle.tsx`, `src/components/ChartsPanel.tsx`, `src/components/{SummaryCards,RecurringPanel,AccountsPanel,Sidebar,ControlBar}.tsx`
+
+#### ⚠️ **Hallazgo pendiente (no corregido esta sesión): datos no aislados por usuario**
+- La tabla `transactions_mvp` sigue con RLS "open access" (`using (true)`) y ninguna query filtra por `user_id`, pese a que ya hay login real. Cualquier usuario autenticado ve/edita/borra las transacciones de todos los demás. Ver sección **Seguridad & Permisos** más abajo.
+
+#### 🚀 **Deploys a Vercel (producción)**
+- Deploy 1: fix de `GEMINI_API_KEY`
+- Deploy 2: rutas reales + Excel rediseñado
+- **Commits:** `7809394` (rutas + Excel), `eed1db4` (rediseño visual) — pusheados a `master`
+- **Pendiente:** el rediseño visual (`eed1db4`) está en GitHub pero aún no desplegado a Vercel producción
+
+---
 
 ### 17 julio 2026 - Sesión 3: Auth completo + Signup + Email confirmation
 
@@ -154,7 +195,7 @@
 |-----------|--------|---------|
 | **GitHub** | ✅ Conectado | Repo: `Proemote/finanzapp` · Branch: `master` |
 | **Supabase** | ✅ Configurado | Variables en `.env.local` · BD PostgreSQL activa |
-| **Vercel** | 🔄 Pendiente | Próxima conexión automática desde GitHub |
+| **Vercel** | ✅ Desplegado | https://finanzapp-five-taupe.vercel.app (Production + Preview) |
 | **Node.js** | ✅ 18+ | Versión compatible |
 | **Next.js** | ✅ 16.2.9 | App Router activo |
 
@@ -402,6 +443,9 @@ finanzapp/
 
 | Commit | Fecha | Mensaje |
 |--------|-------|---------|
+| `eed1db4` | 29 jul | ✅ feat: Rediseño visual soft UI con modo claro/oscuro |
+| `7809394` | 29 jul | ✅ feat: Rutas reales en el sidebar y Excel maestro rediseñado |
+| `38a8387` | 17 jul | ✅ fix: Usar createBrowserClient de @supabase/ssr en vez de supabase-js |
 | `dac72e6` | 16 jul | ✅ feat: Documentación APP_STATUS y estructura de RecurringPanel |
 | `9603637` | 7 jul | ✅ Editar/borrar movimientos con deshacer e importador visual de columnas |
 | `6506f27` | 7 jul | ✅ Analytics mensual y alta manual de movimientos (efectivo) |
@@ -541,10 +585,11 @@ finanzapp/
 ## 🔐 Seguridad & Permisos
 
 ### Supabase Row-Level Security (RLS)
-- Actualmente deshabilitado en dev (relax para pruebas)
-- **TODO:** Implementar RLS en producción
+- **⚠️ Confirmado 29 jul:** `transactions_mvp` tiene RLS activado pero con política "open access" (`using (true)`) y `src/lib/supabase.ts` no filtra por `user_id` en ninguna query. Con el login real ya activo, esto significa que **todos los usuarios autenticados comparten los mismos datos** (ven/editan/borran las transacciones de cualquier otro usuario)
+- **TODO (prioritario):** Implementar RLS real en producción
   - Cada usuario solo ve sus propias transacciones
   - Inserción/actualización solo del propietario
+  - Unificar el cliente Supabase: `lib/supabase.ts` usa `@supabase/supabase-js` clásico (sin sesión), mientras que el login usa `@supabase/ssr` — hay que pasar las queries de transacciones al cliente con sesión antes de poder filtrar por `auth.uid()`
 
 ### Variables de Entorno
 ```
@@ -647,8 +692,10 @@ git push origin main
 |---------|-------|-------------------|--------|
 | 0.1.0 | 1 jul | MVP: import CSV, dashboard, categorización IA | ✅ Stable |
 | 0.2.0 | 7 jul | Edición/eliminación, undo, importador visual columnas | ✅ Stable |
-| 0.3.0 | 16 jul | Documentación completa, estructura RecurringPanel, conexión GitHub | 🚀 En Deploy |
-| 0.4.0 | TBD | [ROADMAP] Completar movimientos recurrentes, autogeneración | 🔄 En desarrollo |
+| 0.3.0 | 16 jul | Documentación completa, estructura RecurringPanel, conexión GitHub | ✅ Stable |
+| 0.4.0 | 17 jul | Auth completo: login/signup, Google OAuth, recuperar contraseña | ✅ Stable |
+| 0.5.0 | 29 jul | Rutas reales, Excel rediseñado (exceljs), modo claro/oscuro, fix IA | 🚀 En Deploy (visual pendiente de subir a Vercel) |
+| 0.6.0 | TBD | [ROADMAP] RLS real por usuario, completar recurrentes, autogeneración | 🔄 En desarrollo |
 
 ---
 
@@ -656,11 +703,11 @@ git push origin main
 
 - **GitHub:** https://github.com/Proemote/finanzapp
 - **Supabase Dashboard:** https://app.supabase.com/projects
-- **Vercel Dashboard:** https://vercel.com/dashboard (próximo deploy)
+- **Vercel Dashboard:** https://vercel.com/dashboard · App: https://finanzapp-five-taupe.vercel.app
 - **Desarrollador:** Carlos Molina Márquez (Proemote)
 - **Email:** contactoproemote@gmail.com
 
 ---
 
-**Última actualización:** 16 julio 2026 · Carlos Molina · Proemote  
-**Próxima acción:** Deploy a Vercel desde GitHub
+**Última actualización:** 29 julio 2026 · Carlos Molina · Proemote  
+**Próxima acción:** Desplegar el rediseño visual a Vercel · Implementar RLS real por usuario
