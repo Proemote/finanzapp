@@ -19,11 +19,17 @@ import {
   type ManualMapping,
   type Row,
 } from "@/lib/parse";
-import { deleteTransaction, loadTransactions, saveTransactions } from "@/lib/supabase";
+import {
+  deleteAllTransactions,
+  deleteTransaction,
+  deleteTransactions,
+  loadTransactions,
+  saveTransactions,
+} from "@/lib/supabase";
 import type { Transaction } from "@/lib/types";
 
 export type Status = {
-  kind: "idle" | "working" | "error" | "ok";
+  kind: "idle" | "working" | "error" | "warning" | "ok";
   message?: string;
   /** Si existe, el aviso muestra un botón "Deshacer" */
   undo?: () => void;
@@ -66,10 +72,13 @@ interface FinanzappContextValue {
   handleAddTransaction: (tx: Transaction) => void;
   handleUpdateTransaction: (tx: Transaction) => void;
   handleDeleteTransaction: (id: string) => void;
+  handleDeleteTransactions: (ids: string[]) => void;
   handleCategoryChange: (id: string, category: string) => void;
+  handleBulkCategoryChange: (ids: string[], category: string) => void;
   handleSave: () => Promise<void>;
   handleLoad: () => Promise<void>;
   handleExport: () => Promise<void>;
+  handleClearAll: () => Promise<void>;
 }
 
 const FinanzappContext = createContext<FinanzappContextValue | null>(null);
@@ -110,6 +119,7 @@ export function FinanzappProvider({ children }: { children: ReactNode }) {
 
         let categories: Record<string, string> = {};
         let aiNote = "";
+        let aiDegraded = false;
         try {
           const res = await fetch("/api/classify", {
             method: "POST",
@@ -125,10 +135,15 @@ export function FinanzappProvider({ children }: { children: ReactNode }) {
           if (!res.ok) throw new Error(`API ${res.status}`);
           const data = await res.json();
           categories = data.categories ?? {};
+          // Ojo: lo que la IA no clasifica NO cae en reglas de nuevo, cae en
+          // la categoría genérica "Otros ingresos/gastos" (ver defaultCategory
+          // en /api/classify/route.ts). El aviso tiene que reflejar eso.
           if (data.aiError) {
-            aiNote = ` (IA no disponible: ${data.aiError}; clasificación por reglas)`;
+            aiDegraded = true;
+            aiNote = ` · ⚠️ IA no disponible (${data.aiError}): ${data.aiPending} movimiento(s) quedaron en "Otros", revísalos a mano`;
           } else if (!data.aiUsed && data.aiPending > 0) {
-            aiNote = " (clasificado por reglas; añade GEMINI_API_KEY para usar IA)";
+            aiDegraded = true;
+            aiNote = ` · ⚠️ ${data.aiPending} movimiento(s) en "Otros" (añade GEMINI_API_KEY para clasificarlos con IA)`;
           }
         } catch {
           for (const t of parsed) {
@@ -156,7 +171,7 @@ export function FinanzappProvider({ children }: { children: ReactNode }) {
           ? ` · ⚠️ no se pudo guardar en Supabase (${saveError}), pulsa "Guardar" o se perderá al recargar`
           : "";
         setStatus({
-          kind: saveError ? "error" : "ok",
+          kind: saveError ? "error" : aiDegraded ? "warning" : "ok",
           message: `${classified.length} movimientos importados en “${account}”${skippedNote}${aiNote}${saveNote}`,
         });
       } catch (err) {
@@ -281,6 +296,44 @@ export function FinanzappProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  /** Recategoriza varios movimientos a la vez (acción en lote de la tabla). */
+  const handleBulkCategoryChange = useCallback((ids: string[], category: string) => {
+    const idSet = new Set(ids);
+    setTransactions((prev) => {
+      const next = prev.map((t) => (idSet.has(t.id) ? { ...t, category } : t));
+      const updated = next.filter((t) => idSet.has(t.id));
+      if (updated.length > 0) void saveTransactions(updated);
+      return next;
+    });
+    setStatus({
+      kind: "ok",
+      message: `${ids.length} movimientos recategorizados a "${category}"`,
+    });
+  }, []);
+
+  /** Elimina varios movimientos a la vez (acción en lote de la tabla), con deshacer conjunto. */
+  const handleDeleteTransactions = useCallback(
+    (ids: string[]) => {
+      const idSet = new Set(ids);
+      const removed = transactions.filter((t) => idSet.has(t.id));
+      if (removed.length === 0) return;
+      setTransactions((prev) => prev.filter((t) => !idSet.has(t.id)));
+      void deleteTransactions(ids);
+      setStatus({
+        kind: "ok",
+        message: `${removed.length} movimientos eliminados`,
+        undo: () => {
+          setTransactions((prev) => [...prev, ...removed]);
+          setStatus({
+            kind: "ok",
+            message: "Movimientos restaurados (pulsa Guardar para re-subirlos a Supabase)",
+          });
+        },
+      });
+    },
+    [transactions]
+  );
+
   const handleSave = useCallback(async () => {
     setStatus({ kind: "working", message: "Guardando en Supabase…" });
     const { error } = await saveTransactions(transactions);
@@ -308,6 +361,19 @@ export function FinanzappProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     handleLoad();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /** Borra todo (local + Supabase). Pensado para reimportar sin duplicados. */
+  const handleClearAll = useCallback(async () => {
+    setStatus({ kind: "working", message: "Vaciando todos los movimientos…" });
+    const { error } = await deleteAllTransactions();
+    if (error) {
+      setStatus({ kind: "error", message: `Error al vaciar: ${error}` });
+      return;
+    }
+    setTransactions([]);
+    setActiveAccount(ALL_ACCOUNTS);
+    setStatus({ kind: "ok", message: "Todos los movimientos han sido eliminados" });
   }, []);
 
   const handleExport = useCallback(async () => {
@@ -355,10 +421,13 @@ export function FinanzappProvider({ children }: { children: ReactNode }) {
     handleAddTransaction,
     handleUpdateTransaction,
     handleDeleteTransaction,
+    handleDeleteTransactions,
     handleCategoryChange,
+    handleBulkCategoryChange,
     handleSave,
     handleLoad,
     handleExport,
+    handleClearAll,
   };
 
   return <FinanzappContext.Provider value={value}>{children}</FinanzappContext.Provider>;

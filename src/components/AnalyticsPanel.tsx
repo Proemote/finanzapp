@@ -17,19 +17,29 @@ function delta(current: number, previous: number | undefined): number | null {
   return ((current - previous) / previous) * 100;
 }
 
+/** Por encima de esto, la base es tan pequeña que el % ya no dice nada útil. */
+const DELTA_DISPLAY_CAP = 999;
+
 function DeltaBadge({ value, goodWhenUp }: { value: number | null; goodWhenUp: boolean }) {
   if (value == null) return <span className="text-xs text-muted">—</span>;
   const up = value >= 0;
   const good = up === goodWhenUp;
   const Icon = up ? ArrowUpRight : ArrowDownRight;
+  const magnitude = Math.abs(value);
+  const capped = magnitude > DELTA_DISPLAY_CAP;
   return (
     <span
       className={`inline-flex items-center gap-0.5 text-xs font-medium tabular-nums ${
         good ? "text-good" : "text-bad"
       }`}
+      title={
+        capped
+          ? `Variación real: ${up ? "+" : "-"}${magnitude.toFixed(1)}% — el mes anterior partía de una base muy baja`
+          : undefined
+      }
     >
       <Icon className="h-3 w-3" aria-hidden />
-      {Math.abs(value).toFixed(1)}%
+      {capped ? DELTA_DISPLAY_CAP : magnitude.toFixed(1)}%{capped ? "+" : ""}
     </span>
   );
 }

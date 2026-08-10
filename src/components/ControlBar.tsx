@@ -1,6 +1,7 @@
 "use client";
 
-import { CloudDownload, CloudUpload, Download, Loader2, Plus } from "lucide-react";
+import { useState } from "react";
+import { CloudDownload, CloudUpload, Download, Loader2, Plus, Trash2 } from "lucide-react";
 import { ALL_ACCOUNTS, useFinanzapp } from "@/context/finanzapp-context";
 import { SIN_CUENTA } from "@/lib/analytics";
 
@@ -18,7 +19,9 @@ export default function ControlBar() {
     handleLoad,
     handleSave,
     handleExport,
+    handleClearAll,
   } = useFinanzapp();
+  const [confirmingClear, setConfirmingClear] = useState(false);
 
   if (!hasData && status.kind === "idle") return null;
 
@@ -67,6 +70,36 @@ export default function ControlBar() {
               <Download className="h-4 w-4" aria-hidden />
               Exportar Excel
             </button>
+
+            {confirmingClear ? (
+              <div className="inline-flex items-center gap-2 rounded-full border border-bad/40 bg-bad/10 px-3 py-1.5 text-sm text-bad">
+                <span>¿Vaciar todo?</span>
+                <button
+                  onClick={() => {
+                    setConfirmingClear(false);
+                    handleClearAll();
+                  }}
+                  className="cursor-pointer rounded-full bg-bad px-3 py-1 font-semibold text-white transition-opacity duration-150 hover:opacity-90"
+                >
+                  Sí, vaciar
+                </button>
+                <button
+                  onClick={() => setConfirmingClear(false)}
+                  className="cursor-pointer rounded-full px-2 py-1 text-secondary hover:text-foreground"
+                >
+                  Cancelar
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmingClear(true)}
+                title="Borra todos los movimientos (local y Supabase) para reimportar sin duplicados"
+                className={`${actionBtn} hover:border-bad/40 hover:text-bad`}
+              >
+                <Trash2 className="h-4 w-4" aria-hidden />
+                Vaciar todo
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -77,6 +110,8 @@ export default function ControlBar() {
           className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm ${
             status.kind === "error"
               ? "border-bad/30 bg-bad/10 text-bad"
+              : status.kind === "warning"
+              ? "border-warn/30 bg-warn/10 text-warn"
               : status.kind === "working"
               ? "border-line bg-surface text-secondary"
               : "border-good/30 bg-good/10 text-good"

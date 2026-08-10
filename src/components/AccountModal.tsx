@@ -48,7 +48,11 @@ export default function AccountModal({ files, accounts, onConfirm, onCancel }: P
     inputRef.current?.select();
   }, []);
 
-  const submit = () => onConfirm(value.trim() || "Sin cuenta");
+  const isEmpty = !value.trim();
+  const submit = () => {
+    if (isEmpty) return;
+    onConfirm(value.trim());
+  };
 
   return (
     <div
@@ -102,6 +106,7 @@ export default function AccountModal({ files, accounts, onConfirm, onCancel }: P
           }}
           list="account-suggestions"
           placeholder="BBVA, Revolut, Caja empresa…"
+          aria-invalid={isEmpty}
           className="mt-1.5 w-full rounded-lg border border-line bg-surface-2 px-3 py-2.5 text-sm outline-none transition-colors duration-150 placeholder:text-muted focus:border-violet"
         />
         <datalist id="account-suggestions">
@@ -109,6 +114,11 @@ export default function AccountModal({ files, accounts, onConfirm, onCancel }: P
             <option key={a} value={a} />
           ))}
         </datalist>
+        {isEmpty && (
+          <p className="mt-1.5 text-xs text-bad">
+            Escribe el nombre de la cuenta o banco para continuar (o elige una de abajo).
+          </p>
+        )}
 
         {accounts.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
@@ -133,7 +143,8 @@ export default function AccountModal({ files, accounts, onConfirm, onCancel }: P
           </button>
           <button
             onClick={submit}
-            className="cursor-pointer rounded-full bg-violet-deep px-5 py-2 text-sm font-semibold text-white transition-opacity duration-150 hover:opacity-90"
+            disabled={isEmpty}
+            className="cursor-pointer rounded-full bg-violet-deep px-5 py-2 text-sm font-semibold text-white transition-opacity duration-150 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Importar
           </button>

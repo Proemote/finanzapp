@@ -6,8 +6,16 @@ import UploadZone from "@/components/UploadZone";
 import { useFinanzapp } from "@/context/finanzapp-context";
 
 export default function MovimientosPage() {
-  const { hasData, visible, query, handleCategoryChange, setEditingTx, handleDeleteTransaction, handleFiles } =
-    useFinanzapp();
+  const {
+    hasData,
+    visible,
+    accounts,
+    query,
+    handleCategoryChange,
+    setEditingTx,
+    handleDeleteTransaction,
+    handleFiles,
+  } = useFinanzapp();
 
   return (
     <div className="space-y-5">
@@ -22,6 +30,7 @@ export default function MovimientosPage() {
         <div className="space-y-5">
           <TransactionsTable
             transactions={visible}
+            accounts={accounts}
             query={query}
             onCategoryChange={handleCategoryChange}
             onEdit={setEditingTx}

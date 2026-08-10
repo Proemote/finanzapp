@@ -1,6 +1,10 @@
+/** Movimientos entre cuentas propias del usuario: no son ingreso ni gasto real. */
+export const TRANSFER_CATEGORY = "Transferencia interna";
+
 export const INCOME_CATEGORIES = [
   "Ventas e ingresos",
   "Devoluciones y reembolsos",
+  TRANSFER_CATEGORY,
   "Otros ingresos",
 ] as const;
 
@@ -20,10 +24,11 @@ export const EXPENSE_CATEGORIES = [
   "Préstamos y financiación",
   "Salud",
   "Ocio y personal",
+  TRANSFER_CATEGORY,
   "Otros gastos",
 ] as const;
 
-export const ALL_CATEGORIES: string[] = [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES];
+export const ALL_CATEGORIES: string[] = [...new Set([...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES])];
 
 export const UNCLASSIFIED = "Sin clasificar";
 

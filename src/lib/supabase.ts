@@ -38,6 +38,22 @@ export async function deleteTransaction(id: string): Promise<{ error?: string }>
   return error ? { error: error.message } : {};
 }
 
+/** Elimina varios movimientos de Supabase de una vez (acciones en lote). */
+export async function deleteTransactions(ids: string[]): Promise<{ error?: string }> {
+  const supabase = getSupabase();
+  if (!supabase) return {};
+  const { error } = await supabase.from("transactions_mvp").delete().in("id", ids);
+  return error ? { error: error.message } : {};
+}
+
+/** Borra TODOS los movimientos de Supabase. Usar antes de reimportar para evitar duplicados. */
+export async function deleteAllTransactions(): Promise<{ error?: string }> {
+  const supabase = getSupabase();
+  if (!supabase) return { error: "Supabase no está configurado (.env.local)" };
+  const { error } = await supabase.from("transactions_mvp").delete().not("id", "is", null);
+  return error ? { error: error.message } : {};
+}
+
 /** Carga todos los movimientos guardados en Supabase. */
 export async function loadTransactions(): Promise<{ data?: Transaction[]; error?: string }> {
   const supabase = getSupabase();
