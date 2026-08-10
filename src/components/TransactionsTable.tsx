@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
-import { formatEUR } from "@/lib/analytics";
+import { Pencil, Trash2, X } from "lucide-react";
+import { formatEUR, formatMonthLong } from "@/lib/analytics";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "@/lib/categories";
 import type { Transaction } from "@/lib/types";
 
@@ -15,6 +15,10 @@ interface Props {
 }
 
 const PAGE_SIZE = 50;
+const ALL_MONTHS = "__all__";
+
+const filterInputCls =
+  "rounded-lg border border-line bg-surface-2 px-2.5 py-1.5 text-xs outline-none transition-colors duration-150 placeholder:text-muted focus:border-violet";
 
 export default function TransactionsTable({
   transactions,
@@ -24,18 +28,50 @@ export default function TransactionsTable({
   onDelete,
 }: Props) {
   const [visible, setVisible] = useState(PAGE_SIZE);
+  const [month, setMonth] = useState(ALL_MONTHS);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [amountMin, setAmountMin] = useState("");
+  const [amountMax, setAmountMax] = useState("");
+
+  const months = useMemo(
+    () => [...new Set(transactions.map((t) => t.date.slice(0, 7)))].sort().reverse(),
+    [transactions]
+  );
+
+  const hasFilters = month !== ALL_MONTHS || dateFrom || dateTo || amountMin || amountMax;
+
+  const resetFilters = () => {
+    setMonth(ALL_MONTHS);
+    setDateFrom("");
+    setDateTo("");
+    setAmountMin("");
+    setAmountMax("");
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
+    const min = amountMin ? Number(amountMin) : null;
+    const max = amountMax ? Number(amountMax) : null;
+
     const sorted = [...transactions].sort((a, b) => b.date.localeCompare(a.date));
-    if (!q) return sorted;
-    return sorted.filter(
-      (t) =>
-        t.description.toLowerCase().includes(q) ||
-        t.category.toLowerCase().includes(q) ||
-        t.account.toLowerCase().includes(q)
-    );
-  }, [transactions, query]);
+    return sorted.filter((t) => {
+      if (q) {
+        const matchesQuery =
+          t.description.toLowerCase().includes(q) ||
+          t.category.toLowerCase().includes(q) ||
+          t.account.toLowerCase().includes(q);
+        if (!matchesQuery) return false;
+      }
+      if (month !== ALL_MONTHS && !t.date.startsWith(month)) return false;
+      if (dateFrom && t.date < dateFrom) return false;
+      if (dateTo && t.date > dateTo) return false;
+      const abs = Math.abs(t.amount);
+      if (min != null && abs < min) return false;
+      if (max != null && abs > max) return false;
+      return true;
+    });
+  }, [transactions, query, month, dateFrom, dateTo, amountMin, amountMax]);
 
   const shown = filtered.slice(0, visible);
 
@@ -48,6 +84,95 @@ export default function TransactionsTable({
             ? `${filtered.length} resultados para “${query}”`
             : `Historial de tus ${filtered.length} transacciones`}
         </p>
+
+        <div className="mt-3 flex flex-wrap items-end gap-3">
+          <div>
+            <label htmlFor="filter-month" className="block text-[11px] text-muted">
+              Mes
+            </label>
+            <select
+              id="filter-month"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+              className={`${filterInputCls} mt-1 cursor-pointer capitalize`}
+            >
+              <option value={ALL_MONTHS}>Todos los meses</option>
+              {months.map((m) => (
+                <option key={m} value={m} className="capitalize">
+                  {formatMonthLong(m)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="filter-date-from" className="block text-[11px] text-muted">
+              Desde
+            </label>
+            <input
+              id="filter-date-from"
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className={`${filterInputCls} mt-1`}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="filter-date-to" className="block text-[11px] text-muted">
+              Hasta
+            </label>
+            <input
+              id="filter-date-to"
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className={`${filterInputCls} mt-1`}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="filter-amount-min" className="block text-[11px] text-muted">
+              Importe mín. (€)
+            </label>
+            <input
+              id="filter-amount-min"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="0"
+              value={amountMin}
+              onChange={(e) => setAmountMin(e.target.value)}
+              className={`${filterInputCls} mt-1 w-24`}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="filter-amount-max" className="block text-[11px] text-muted">
+              Importe máx. (€)
+            </label>
+            <input
+              id="filter-amount-max"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="Sin límite"
+              value={amountMax}
+              onChange={(e) => setAmountMax(e.target.value)}
+              className={`${filterInputCls} mt-1 w-24`}
+            />
+          </div>
+
+          {hasFilters && (
+            <button
+              onClick={resetFilters}
+              className="mb-0.5 inline-flex cursor-pointer items-center gap-1 rounded-full border border-line px-3 py-1.5 text-xs font-medium text-secondary transition-colors duration-150 hover:border-line-strong hover:text-foreground"
+            >
+              <X className="h-3 w-3" aria-hidden />
+              Limpiar filtros
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="overflow-x-auto">
@@ -130,7 +255,7 @@ export default function TransactionsTable({
             {shown.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-5 py-10 text-center text-sm text-muted">
-                  No hay movimientos que coincidan con la búsqueda.
+                  No hay movimientos que coincidan con la búsqueda o los filtros.
                 </td>
               </tr>
             )}

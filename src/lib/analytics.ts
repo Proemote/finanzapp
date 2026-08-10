@@ -83,3 +83,9 @@ export const formatMonth = (month: string) => {
   const date = new Date(Number(y), Number(m) - 1, 1);
   return date.toLocaleDateString("es-ES", { month: "short", year: "2-digit" });
 };
+
+export const formatMonthLong = (month: string) => {
+  const [y, m] = month.split("-");
+  const date = new Date(Number(y), Number(m) - 1, 1);
+  return date.toLocaleDateString("es-ES", { month: "long", year: "numeric" });
+};

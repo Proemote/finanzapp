@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -43,6 +44,7 @@ interface FinanzappContextValue {
   activeAccount: string;
   setActiveAccount: (account: string) => void;
   status: Status;
+  setStatus: (status: Status) => void;
   query: string;
   setQuery: (query: string) => void;
   hasData: boolean;
@@ -147,10 +149,15 @@ export function FinanzappProvider({ children }: { children: ReactNode }) {
         });
         setActiveAccount(ALL_ACCOUNTS);
 
+        const { error: saveError } = await saveTransactions(classified);
+
         const skippedNote = skipped > 0 ? ` · ${skipped} filas omitidas` : "";
+        const saveNote = saveError
+          ? ` · ⚠️ no se pudo guardar en Supabase (${saveError}), pulsa "Guardar" o se perderá al recargar`
+          : "";
         setStatus({
-          kind: "ok",
-          message: `${classified.length} movimientos importados en “${account}”${skippedNote}${aiNote}`,
+          kind: saveError ? "error" : "ok",
+          message: `${classified.length} movimientos importados en “${account}”${skippedNote}${aiNote}${saveNote}`,
         });
       } catch (err) {
         setStatus({
@@ -234,12 +241,14 @@ export function FinanzappProvider({ children }: { children: ReactNode }) {
       kind: "ok",
       message: `Movimiento añadido: ${tx.description} (${tx.account})`,
     });
+    void saveTransactions([tx]);
   }, []);
 
   const handleUpdateTransaction = useCallback((tx: Transaction) => {
     setTransactions((prev) => prev.map((t) => (t.id === tx.id ? tx : t)));
     setEditingTx(null);
     setStatus({ kind: "ok", message: `Movimiento actualizado: ${tx.description}` });
+    void saveTransactions([tx]);
   }, []);
 
   const handleDeleteTransaction = useCallback(
@@ -264,7 +273,12 @@ export function FinanzappProvider({ children }: { children: ReactNode }) {
   );
 
   const handleCategoryChange = useCallback((id: string, category: string) => {
-    setTransactions((prev) => prev.map((t) => (t.id === id ? { ...t, category } : t)));
+    setTransactions((prev) => {
+      const next = prev.map((t) => (t.id === id ? { ...t, category } : t));
+      const updated = next.find((t) => t.id === id);
+      if (updated) void saveTransactions([updated]);
+      return next;
+    });
   }, []);
 
   const handleSave = useCallback(async () => {
@@ -289,10 +303,18 @@ export function FinanzappProvider({ children }: { children: ReactNode }) {
     setStatus({ kind: "ok", message: `${data?.length ?? 0} movimientos cargados de Supabase` });
   }, []);
 
+  // Recupera automáticamente lo guardado en Supabase al abrir la app,
+  // para que refrescar la página no borre lo ya importado.
+  useEffect(() => {
+    handleLoad();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleExport = useCallback(async () => {
     setStatus({ kind: "working", message: "Generando Excel…" });
     try {
-      await exportMasterExcel(transactions);
+      const accountLabel = activeAccount === ALL_ACCOUNTS ? undefined : activeAccount;
+      await exportMasterExcel(visible, accountLabel);
       setStatus({ kind: "ok", message: "Excel generado y descargado" });
     } catch (err) {
       setStatus({
@@ -300,7 +322,7 @@ export function FinanzappProvider({ children }: { children: ReactNode }) {
         message: err instanceof Error ? err.message : "Error al generar el Excel",
       });
     }
-  }, [transactions]);
+  }, [visible, activeAccount]);
 
   const totalsVisible = totals(visible);
   const monthsVisible = monthlySummaries(visible);
@@ -313,6 +335,7 @@ export function FinanzappProvider({ children }: { children: ReactNode }) {
     activeAccount,
     setActiveAccount,
     status,
+    setStatus,
     query,
     setQuery,
     hasData,

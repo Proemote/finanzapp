@@ -64,7 +64,7 @@ const monthLabel = (month: string) => {
  * desglose por categorías, cuentas y todos los movimientos, agrupados
  * por mes con totales — estilo cuadrante contable.
  */
-export async function exportMasterExcel(transactions: Transaction[]) {
+export async function exportMasterExcel(transactions: Transaction[], accountLabel?: string) {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Finanzapp";
   workbook.created = new Date();
@@ -80,9 +80,12 @@ export async function exportMasterExcel(transactions: Transaction[]) {
   });
   const url = URL.createObjectURL(blob);
   const today = new Date().toISOString().slice(0, 10);
+  const slug = accountLabel
+    ? `-${accountLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`
+    : "";
   const a = document.createElement("a");
   a.href = url;
-  a.download = `finanzas-maestro-${today}.xlsx`;
+  a.download = `finanzas-maestro${slug}-${today}.xlsx`;
   a.click();
   URL.revokeObjectURL(url);
 }

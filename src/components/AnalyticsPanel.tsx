@@ -2,20 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
-import { categorySummaries, formatEUR, monthlySummaries } from "@/lib/analytics";
+import { categorySummaries, formatEUR, formatMonthLong, monthlySummaries } from "@/lib/analytics";
 import type { Transaction } from "@/lib/types";
 
 interface Props {
   transactions: Transaction[];
 }
 
-const monthLabel = (month: string) => {
-  const [y, m] = month.split("-");
-  return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString("es-ES", {
-    month: "long",
-    year: "numeric",
-  });
-};
+const monthLabel = formatMonthLong;
 
 /** Variación porcentual vs. el valor anterior; null si no es calculable. */
 function delta(current: number, previous: number | undefined): number | null {
