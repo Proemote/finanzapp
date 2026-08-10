@@ -1,10 +1,59 @@
 # 📊 Finanzapp — Estado Actual del Proyecto
 
-**Última actualización:** 29 julio 2026
+**Última actualización:** 10 agosto 2026
 
 ---
 
 ## 📅 Changelog (Log de Cambios)
+
+### 10 agosto 2026 - Sesión 5: Auditoría de bugs, filtros avanzados en Movimientos, fix crítico de persistencia
+
+#### 🚨 **0. Incidente: 504 en Vercel (`MIDDLEWARE_INVOCATION_TIMEOUT`)**
+- **Síntoma:** la web en producción devolvía 504 al entrar, con el middleware colgándose
+- **Causa:** el proyecto de Supabase (`zgvwarryenikpodmdknz`) estaba **pausado por inactividad** (plan gratuito, ~1 semana sin uso). `middleware.ts` llama a `supabase.auth.getUser()` en cada request; contra un proyecto pausado (Cloudflare 521) la llamada se queda colgada hasta que Vercel corta por timeout
+- **Solución:** reactivado manualmente desde el dashboard de Supabase. No fue un fix de código — apunte para el futuro: si vuelve a pasar tras una temporada sin usar la app, revisar primero si el proyecto está pausado antes de tocar el middleware
+
+#### 🐛 **1. Fix crítico: se perdía todo lo importado al refrescar la página**
+- **Problema:** importar un CSV/Excel solo dejaba los movimientos en memoria del navegador — nunca se guardaban en Supabase automáticamente, y la app tampoco cargaba nada al abrir. Refrescar la página = perder la importación si no habías pulsado "Guardar" a mano
+- **Solución** (`src/context/finanzapp-context.tsx`): auto-guardado en Supabase justo tras clasificar una importación, auto-carga de lo ya guardado al abrir la app (`useEffect` en el mount), y el mismo fix aplicado a añadir/editar/recategorizar manualmente (antes solo borrar sincronizaba al momento)
+- Los botones "Guardar"/"Cargar" siguen para forzar una sincronización manual si hace falta
+
+#### 📊 **2. Exportar Excel respeta la cuenta filtrada**
+- **Problema:** el botón "Exportar Excel" ignoraba el filtro de cuenta activo (`ControlBar`) y exportaba siempre todos los movimientos
+- **Solución** (`src/lib/export.ts`, `finanzapp-context.tsx`): `exportMasterExcel` ahora recibe los movimientos ya filtrados (`visible`) y el nombre de archivo incluye la cuenta cuando hay una seleccionada
+
+#### 🔍 **3. Movimientos: filtros de mes, fecha e importe**
+- `TransactionsTable.tsx`: filtro por mes (desplegable), rango de fechas (desde/hasta), rango de importe (mín/máx en valor absoluto), con botón "Limpiar filtros"
+
+#### 🔁 **4. Recurrentes: marcar como "ya no es recurrente"**
+- **Problema:** la detección automática (`detectRecurring`) no distinguía patrones que ya habían dejado de repetirse — quedaban para siempre en la lista
+- **Solución** (`RecurringPanel.tsx`): botón por fila para descartar una serie, persistido en `localStorage`, con deshacer y contador de "N descartados · restaurar todos"
+
+#### 🧹 **5. "Vaciar todo"**
+- Nuevo botón en `ControlBar.tsx` con confirmación en dos pasos que borra todos los movimientos, local y en Supabase (`deleteAllTransactions` en `src/lib/supabase.ts`) — pensado para reimportar un archivo maestro sin arrastrar duplicados de importaciones solapadas anteriores
+- ⚠️ Mismo aviso que en la sección de Seguridad: mientras `transactions_mvp` no aísle por `user_id`, este botón borra los datos de cualquiera que use la app, no solo los propios
+
+#### 🔎 **6. Movimientos: filtros de cuenta/categoría/tipo, ordenación, selección múltiple**
+- **Filtro por cuenta y por categoría** (selector múltiple nuevo, `src/components/MultiSelectFilter.tsx`, reutilizable) — usan los valores reales presentes en los datos, no listas fijas
+- **Filtro por tipo:** Ingreso / Gasto / Transferencia interna — nueva categoría `"Transferencia interna"` en `src/lib/categories.ts` (`TRANSFER_CATEGORY`), asignable a mano igual que cualquier otra categoría (se decidió no usar heurística automática de detección de pares, por el mismo riesgo de falsos positivos que ya dio Recurrentes)
+- **Ordenación** por Fecha e Importe, ascendente/descendente, con indicador de dirección en la cabecera
+- **Selección múltiple de filas** con acciones en lote: recategorizar (`handleBulkCategoryChange`, un solo guardado en Supabase) y eliminar (`handleDeleteTransactions`, un solo deshacer conjunto para todo el lote) — nuevas funciones en `finanzapp-context.tsx` y `deleteTransactions` (borrado en lote) en `src/lib/supabase.ts`
+- Paginación: se mantuvo el "Cargar más" existente (decisión explícita, no se cambió a scroll infinito ni páginas numeradas)
+- Sin librerías nuevas — todo hecho a mano (`useState`/`useMemo`), siguiendo el patrón ya existente en el archivo
+
+#### 🩹 **7. Fixes de la auditoría (Fase 1)**
+- **`AccountModal.tsx`:** el botón "Importar" ya no permite enviar con el nombre de cuenta vacío (antes caía en `"Sin cuenta"` en silencio sin que el usuario se diera cuenta)
+- **Aviso de clasificación IA corregido:** cuando Gemini falla (429 por cuota, o sin `GEMINI_API_KEY`), el mensaje decía "clasificación por reglas" — **falso**: esos movimientos caen en la categoría genérica "Otros ingresos/gastos" (`defaultCategory`), no se reclasifican por reglas. El aviso ahora lo dice explícitamente y cuenta cuántos movimientos se vieron afectados
+- **Nuevo estado visual "warning"** (ámbar, token `--warn` en `globals.css` para los 4 modos de tema): antes este aviso se mostraba en verde, indistinguible de un import 100% exitoso
+- **`AnalyticsPanel.tsx`:** la variación % mes a mes mostraba cifras absurdas (ej. +6030,2% en abril 2026) cuando el mes anterior tenía una base casi nula (1,99€, un único movimiento). Se limita la cifra mostrada a 999%, con el valor real calculado disponible en el tooltip al pasar el ratón
+- **Nota de datos pendiente de revisar:** marzo 2026 solo tenía un movimiento (1,99€) en la base de datos — puede ser una importación incompleta de ese mes, no solo un bug de fórmula
+
+#### 🚀 **Commits**
+- `bfe9e95` — fix: exportar Excel por cuenta filtrada, filtros de movimientos, recurrentes descartables y auto-guardado
+- `9e21231` — feat: filtros avanzados en Movimientos + fix de 3 bugs auditados
+- Pusheados a `master`, auto-deploy activado en Vercel
+
+---
 
 ### 29 julio 2026 - Sesión 4: Fix IA, rutas reales, Excel rediseñado, modo claro/oscuro
 
@@ -443,6 +492,8 @@ finanzapp/
 
 | Commit | Fecha | Mensaje |
 |--------|-------|---------|
+| `9e21231` | 10 ago | ✅ feat: Filtros avanzados en Movimientos + fix de 3 bugs auditados |
+| `bfe9e95` | 10 ago | ✅ fix: Excel por cuenta filtrada, filtros de movimientos, recurrentes descartables, auto-guardado |
 | `eed1db4` | 29 jul | ✅ feat: Rediseño visual soft UI con modo claro/oscuro |
 | `7809394` | 29 jul | ✅ feat: Rutas reales en el sidebar y Excel maestro rediseñado |
 | `38a8387` | 17 jul | ✅ fix: Usar createBrowserClient de @supabase/ssr en vez de supabase-js |
@@ -590,6 +641,7 @@ finanzapp/
   - Cada usuario solo ve sus propias transacciones
   - Inserción/actualización solo del propietario
   - Unificar el cliente Supabase: `lib/supabase.ts` usa `@supabase/supabase-js` clásico (sin sesión), mientras que el login usa `@supabase/ssr` — hay que pasar las queries de transacciones al cliente con sesión antes de poder filtrar por `auth.uid()`
+- **⚠️ Añadido 10 ago:** el botón "Vaciar todo" (`ControlBar.tsx`) y el borrado en lote de la tabla de Movimientos (`handleDeleteTransactions`) heredan el mismo problema — mientras no haya `user_id`, borran los datos de **todos** los usuarios, no solo los propios. Priorizar el RLS real antes de dar acceso a un segundo usuario.
 
 ### Variables de Entorno
 ```
@@ -694,8 +746,9 @@ git push origin main
 | 0.2.0 | 7 jul | Edición/eliminación, undo, importador visual columnas | ✅ Stable |
 | 0.3.0 | 16 jul | Documentación completa, estructura RecurringPanel, conexión GitHub | ✅ Stable |
 | 0.4.0 | 17 jul | Auth completo: login/signup, Google OAuth, recuperar contraseña | ✅ Stable |
-| 0.5.0 | 29 jul | Rutas reales, Excel rediseñado (exceljs), modo claro/oscuro, fix IA | 🚀 En Deploy (visual pendiente de subir a Vercel) |
-| 0.6.0 | TBD | [ROADMAP] RLS real por usuario, completar recurrentes, autogeneración | 🔄 En desarrollo |
+| 0.5.0 | 29 jul | Rutas reales, Excel rediseñado (exceljs), modo claro/oscuro, fix IA | ✅ Stable |
+| 0.6.0 | 10 ago | Fix persistencia (auto-guardado/carga), filtros avanzados en Movimientos, selección en lote, "Vaciar todo", recurrentes descartables, fix aviso IA y % en Analytics | ✅ Stable |
+| 0.7.0 | TBD | [ROADMAP] RLS real por usuario, tabla `recurring_transactions` con generación automática | 🔄 En desarrollo |
 
 ---
 
@@ -709,5 +762,5 @@ git push origin main
 
 ---
 
-**Última actualización:** 29 julio 2026 · Carlos Molina · Proemote  
-**Próxima acción:** Desplegar el rediseño visual a Vercel · Implementar RLS real por usuario
+**Última actualización:** 10 agosto 2026 · Carlos Molina · Proemote  
+**Próxima acción:** Implementar RLS real por usuario · revisar si marzo 2026 tiene datos incompletos · completar tabla `recurring_transactions` con generación automática
