@@ -1,11 +1,12 @@
 -- Finanzapp — tabla para la fase MVP single-user (sin auth)
 -- Ejecutar en: Supabase Dashboard → SQL Editor → New query → pegar y Run
 --
--- NOTA: este proyecto ya contiene el modelo completo multi-usuario
--- (accounts, categories, transactions, merchant_rules con RLS por user_id,
--- ver finazapp-context.md). NO lo tocamos: esta tabla separada sirve solo
--- para el MVP sin login. Al activar Supabase Auth, migraremos los datos a
--- `transactions` y eliminaremos esta tabla.
+-- ⚠️ Este script deja la tabla con RLS "open access" (using (true)) —
+-- histórico de la fase inicial sin login. Ya NO representa el estado
+-- deseado: con Supabase Auth activo, aplica también
+-- migration_user_isolation.sql (mismo directorio) para tener aislamiento
+-- real por usuario. Si estás montando el proyecto desde cero, ejecuta este
+-- archivo primero y migration_user_isolation.sql justo después.
 
 create table if not exists public.transactions_mvp (
   id text primary key,

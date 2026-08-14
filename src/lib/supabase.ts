@@ -1,13 +1,17 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "./supabase-browser";
 import type { Transaction } from "./types";
 
 let client: SupabaseClient | null = null;
 
+/**
+ * Cliente con sesión (cookies del login) — imprescindible para que las
+ * políticas RLS por user_id sepan quién está preguntando. Antes se usaba un
+ * cliente anónimo sin sesión, lo que dejaba la tabla efectivamente abierta.
+ */
 export function getSupabase(): SupabaseClient | null {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) return null;
-  if (!client) client = createClient(url, key);
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return null;
+  if (!client) client = createClient();
   return client;
 }
 
@@ -15,6 +19,11 @@ export function getSupabase(): SupabaseClient | null {
 export async function saveTransactions(transactions: Transaction[]): Promise<{ error?: string }> {
   const supabase = getSupabase();
   if (!supabase) return { error: "Supabase no está configurado (.env.local)" };
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "No hay sesión activa" };
 
   const rows = transactions.map((t) => ({
     id: t.id,
@@ -24,6 +33,7 @@ export async function saveTransactions(transactions: Transaction[]): Promise<{ e
     category: t.category,
     account: t.account,
     source: t.source,
+    user_id: user.id,
   }));
 
   const { error } = await supabase.from("transactions_mvp").upsert(rows, { onConflict: "id" });
