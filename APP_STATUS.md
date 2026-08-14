@@ -1,10 +1,61 @@
 # 📊 Finanzapp — Estado Actual del Proyecto
 
-**Última actualización:** 10 agosto 2026
+**Última actualización:** 14 agosto 2026
 
 ---
 
 ## 📅 Changelog (Log de Cambios)
+
+### 14 agosto 2026 - Sesión 6: Mejora estructural (navegación temporal, comparativas, suscripciones, transferencias) + fix crítico de seguridad RLS
+
+Sesión grande, tomando como referencia funcional un Excel personal de control financiero (`control-financiero-personal-2026.xlsx`) que Carlos ya llevaba a mano en paralelo a la app — el objetivo era trasladar su utilidad (entender el mes a mes, comparar períodos, ver suscripciones y transferencias) a la interfaz, sin copiar el diseño de hoja de cálculo ni tocar funcionalidades ya existentes.
+
+#### 🚨 **0. Fix crítico de seguridad: `transactions_mvp` no aislaba datos por usuario**
+- **Problema:** confirmado ya el 29 jul y sin resolver — la tabla tenía RLS con política "open access" (`using (true)`) y ninguna query filtraba por `user_id`. Con el login real activo, **cualquier cuenta registrada** (el registro es abierto, sin invitación) veía/editaba/borraba los movimientos de todos los demás usuarios. Peor aún: como la política ni comprobaba sesión, la clave pública de Supabase (embebida en el JS del cliente) bastaba para leer/borrar todo desde fuera de la app, sin login
+- **Solución:**
+  - `src/lib/supabase.ts`: cliente con sesión (`@supabase/ssr`, el mismo que ya usaba el login) en vez del cliente anónimo sin sesión que se usaba para las queries de transacciones; `user_id` explícito en cada guardado
+  - `supabase/migration_user_isolation.sql` (nuevo): columna `user_id` + backfill al usuario existente + políticas RLS reales (`auth.uid() = user_id`) para select/insert/update/delete + índice
+  - **⚠️ Pendiente de ejecutar por Carlos:** no hay credenciales de escritura sobre este proyecto de Supabase desde aquí — el SQL está listo pero hay que pegarlo y correrlo a mano en el SQL Editor del dashboard (el propio script trae un Paso 0 de comprobación de seguridad antes del backfill)
+  - **Nota de despliegue:** hasta que se ejecute la migración, la app sigue funcionando igual (insegura, pero no rota); en cuanto se ejecute, el código ya desplegado en Vercel dejará de poder guardar movimientos hasta que se despliegue también este commit (el insert intentaría escribir en una columna `user_id` inexistente sin la migración, o violaría RLS con el cliente viejo sin sesión)
+- **Commit:** `459b262`
+
+#### 🗓️ **1. Navegación temporal + vista mensual del Dashboard**
+- Selector de período global (`src/lib/period.ts`): Este mes, Mes anterior, Últimos 3/6/12 meses, Este año, Todo el histórico, Rango personalizado — visible en la barra de control, afecta a Dashboard y Analytics
+- Navegador mes a mes (`MonthNav.tsx`, "← Agosto 2026 →") independiente del selector de período, para consultar cualquier mes histórico
+- Dashboard rehecho como vista mensual estilo Excel: resumen narrativo determinista (sin IA generativa — `monthNarrative()` en `analytics.ts`), KPIs (Ingresos/Gastos/Balance/Tasa de ahorro), gastos por categoría con % y drill-down (clic → filtra Movimientos reutilizando el buscador existente), evolución semanal en barras agrupadas (`MonthWeeklyChart.tsx`), movimientos del mes reutilizando `TransactionsTable` tal cual
+
+#### 📊 **2. Vista comparativa de varios meses (Analytics)**
+- 4 gráficos nuevos (`TrendCharts.tsx`): Ingresos vs. Gastos por mes en barras agrupadas, Tasa de ahorro mensual, Evolución del balance acumulado, Evolución de categorías (top 5 + Otros)
+- Kit de gráficos compartido extraído (`src/components/charts/ChartKit.tsx`: Panel/Tooltip/Leyenda/paleta) para no duplicarlo entre `ChartsPanel`, `MonthWeeklyChart` y `TrendCharts`
+
+#### 🔁 **3. Suscripciones y recurrentes: estados confirmable/descartable**
+- `RecurringPanel.tsx` reescrito: distinción detectada automáticamente / confirmada por el usuario / descartada (antes solo existía "descartada")
+- Resumen de 3 cifras: suscripciones activas, coste mensual, coste anual — **solo cuentan las confirmadas**, nada se asume sin que el usuario lo valide
+- Nuevas columnas: cuenta de pago, último cobro, coste mensual y anual equivalente por fila (`annualEquivalent()` nuevo en `lib/recurring.ts`)
+
+#### 🔀 **4. Detección y confirmación de transferencias internas**
+- `src/lib/transfers.ts` (nuevo): empareja un gasto en una cuenta con un ingreso de importe casi idéntico en otra cuenta, dentro de una ventana de 3 días
+- `TransferSuggestions.tsx` en la página Cuentas: tarjeta "Posible transferencia entre tus cuentas · [Confirmar transferencia]" — al confirmar, recategoriza ambas patas a "Transferencia interna" reutilizando `handleBulkCategoryChange` (sin tabla nueva ni migración)
+- **Fix bundled:** `analytics.ts` sumaba las transferencias internas como ingreso/gasto real en todos los totales (`totals`, `monthlySummaries`, `categorySummaries`, `accountSummaries`) — ya excluidas en todos lados, pero siguen visibles en Movimientos
+- Probado en vivo con un par sintético (BBVA→Revolut 500€): confirmación funciona, desaparece de Cuentas, sigue en Movimientos con la categoría correcta
+
+#### 📥 **5. Exportación a Excel personalizable**
+- `ExportModal.tsx` (nuevo): selector de período independiente + checkboxes de hojas (Categorías, Cuentas, Resumen anual multi-año, hojas mensuales con desglose semanal — todas nuevas salvo Categorías/Cuentas que ya existían)
+- Suscripciones y Transferencias aparecen ya en la lista pero desactivadas ("Próximamente") hasta que tengan sentido con sus propios bloques
+- Verificado descargando el Excel real: 26 hojas mensuales generadas, cifras coincidiendo exactamente con el Dashboard
+
+#### 🌐 **6. Dominio de Vercel cambiado**
+- URL de producción ahora `finanzapp-money.vercel.app` (antes `finanzapp-five-taupe.vercel.app`) — no había nada hardcodeado en el código (`redirectTo` ya usaba `window.location.origin` dinámicamente), pero el login con Google dejó de funcionar porque Supabase seguía con la URL vieja en Authentication → URL Configuration
+- **Pendiente por Carlos:** actualizar Site URL y añadir `https://finanzapp-money.vercel.app/auth/callback` a Redirect URLs en el dashboard de Supabase
+- **Hallazgo aparte, no relacionado:** el email de confirmación de cuentas nuevas no llega — ya era un pendiente conocido (mailer por defecto de Supabase, muy limitado); el arreglo real es SMTP propio con Resend, sigue en el roadmap
+
+#### 🚀 **Commits**
+- `e5faf95` — feat: navegación temporal, comparativa mensual, suscripciones confirmables y transferencias internas
+- `459b262` — fix(seguridad): aislamiento real por usuario en transactions_mvp
+- `82ce008` — docs: actualizar dominio de Vercel
+- Pusheados a `master`, auto-deploy activado en Vercel
+
+---
 
 ### 10 agosto 2026 - Sesión 5: Auditoría de bugs, filtros avanzados en Movimientos, fix crítico de persistencia
 
@@ -492,6 +543,9 @@ finanzapp/
 
 | Commit | Fecha | Mensaje |
 |--------|-------|---------|
+| `82ce008` | 14 ago | ✅ docs: Actualizar dominio de Vercel |
+| `459b262` | 14 ago | ✅ fix(seguridad): Aislamiento real por usuario en transactions_mvp |
+| `e5faf95` | 14 ago | ✅ feat: Navegación temporal, comparativa mensual, suscripciones confirmables y transferencias internas |
 | `9e21231` | 10 ago | ✅ feat: Filtros avanzados en Movimientos + fix de 3 bugs auditados |
 | `bfe9e95` | 10 ago | ✅ fix: Excel por cuenta filtrada, filtros de movimientos, recurrentes descartables, auto-guardado |
 | `eed1db4` | 29 jul | ✅ feat: Rediseño visual soft UI con modo claro/oscuro |
@@ -636,12 +690,10 @@ finanzapp/
 ## 🔐 Seguridad & Permisos
 
 ### Supabase Row-Level Security (RLS)
-- **⚠️ Confirmado 29 jul:** `transactions_mvp` tiene RLS activado pero con política "open access" (`using (true)`) y `src/lib/supabase.ts` no filtra por `user_id` en ninguna query. Con el login real ya activo, esto significa que **todos los usuarios autenticados comparten los mismos datos** (ven/editan/borran las transacciones de cualquier otro usuario)
-- **TODO (prioritario):** Implementar RLS real en producción
-  - Cada usuario solo ve sus propias transacciones
-  - Inserción/actualización solo del propietario
-  - Unificar el cliente Supabase: `lib/supabase.ts` usa `@supabase/supabase-js` clásico (sin sesión), mientras que el login usa `@supabase/ssr` — hay que pasar las queries de transacciones al cliente con sesión antes de poder filtrar por `auth.uid()`
-- **⚠️ Añadido 10 ago:** el botón "Vaciar todo" (`ControlBar.tsx`) y el borrado en lote de la tabla de Movimientos (`handleDeleteTransactions`) heredan el mismo problema — mientras no haya `user_id`, borran los datos de **todos** los usuarios, no solo los propios. Priorizar el RLS real antes de dar acceso a un segundo usuario.
+- **✅ Código listo desde el 14 ago (commit `459b262`):** `src/lib/supabase.ts` ya usa el cliente con sesión (`@supabase/ssr`) y manda `user_id` en cada guardado. `supabase/migration_user_isolation.sql` tiene la columna `user_id`, el backfill y las 4 políticas RLS reales (`auth.uid() = user_id`)
+- **⚠️ Pendiente de ejecutar en producción:** la migración SQL vive en el repo pero nadie la ha corrido todavía en el SQL Editor del dashboard de Supabase — hasta que se ejecute, la política sigue siendo "open access" (`using (true)`) y el problema original persiste: cualquier cuenta registrada (el registro es abierto) ve/edita/borra las transacciones de cualquier otro usuario, y como la política no comprueba sesión, la clave pública del cliente basta para leer/borrar todo sin pasar por el login
+- El botón "Vaciar todo" y el borrado en lote heredan el mismo problema hasta que se ejecute la migración
+- **No compartir el enlace de la app hasta confirmar que la migración se ha ejecutado.**
 
 ### Variables de Entorno
 ```
@@ -650,8 +702,9 @@ SUPABASE_ANON_KEY=eyJhbGc...
 ```
 
 ### Autenticación
-- Supabase Auth (Google, email/password)
-- **TODO:** Integrar login con Supabase (ahora es anónimo)
+- Supabase Auth (Google, email/password) — funcionando desde Sesión 3 (17 jul)
+- **⚠️ 14 ago:** login con Google roto tras el cambio de dominio a `finanzapp-money.vercel.app` — Supabase (Authentication → URL Configuration) sigue apuntando a la URL vieja. Pendiente de que Carlos actualice Site URL y Redirect URLs en el dashboard
+- **⚠️ Conocido:** el email de confirmación al crear cuenta no llega de forma fiable — mailer por defecto de Supabase, muy limitado. Arreglo real: SMTP propio (Resend), sigue pendiente
 
 ---
 
@@ -748,7 +801,8 @@ git push origin main
 | 0.4.0 | 17 jul | Auth completo: login/signup, Google OAuth, recuperar contraseña | ✅ Stable |
 | 0.5.0 | 29 jul | Rutas reales, Excel rediseñado (exceljs), modo claro/oscuro, fix IA | ✅ Stable |
 | 0.6.0 | 10 ago | Fix persistencia (auto-guardado/carga), filtros avanzados en Movimientos, selección en lote, "Vaciar todo", recurrentes descartables, fix aviso IA y % en Analytics | ✅ Stable |
-| 0.7.0 | TBD | [ROADMAP] RLS real por usuario, tabla `recurring_transactions` con generación automática | 🔄 En desarrollo |
+| 0.7.0 | 14 ago | Navegación temporal + vista mensual, comparativa de varios meses, suscripciones confirmables, transferencias internas, exportación personalizable, fix RLS por usuario (código listo, migración SQL pendiente de ejecutar) | ✅ Stable |
+| 0.8.0 | TBD | [ROADMAP] Ejecutar migración RLS en producción, drill-down completo, reglas de categorización, menú lateral colapsable, tabla `recurring_transactions` con generación automática | 🔄 En desarrollo |
 
 ---
 
@@ -762,5 +816,5 @@ git push origin main
 
 ---
 
-**Última actualización:** 10 agosto 2026 · Carlos Molina · Proemote  
-**Próxima acción:** Implementar RLS real por usuario · revisar si marzo 2026 tiene datos incompletos · completar tabla `recurring_transactions` con generación automática
+**Última actualización:** 14 agosto 2026 · Carlos Molina · Proemote  
+**Próxima acción:** Ejecutar `supabase/migration_user_isolation.sql` en el SQL Editor de Supabase (no compartir el enlace hasta entonces) · actualizar Site URL/Redirect URLs en Supabase para el nuevo dominio · revisar si marzo 2026 tiene datos incompletos · completar tabla `recurring_transactions` con generación automática
