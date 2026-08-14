@@ -244,7 +244,7 @@
 |-----------|--------|---------|
 | **GitHub** | ✅ Conectado | Repo: `Proemote/finanzapp` · Branch: `master` |
 | **Supabase** | ✅ Configurado | Variables en `.env.local` · BD PostgreSQL activa |
-| **Vercel** | ✅ Desplegado | https://finanzapp-five-taupe.vercel.app (Production + Preview) |
+| **Vercel** | ✅ Desplegado | https://finanzapp-money.vercel.app (Production + Preview) |
 | **Node.js** | ✅ 18+ | Versión compatible |
 | **Next.js** | ✅ 16.2.9 | App Router activo |
 
@@ -733,7 +733,7 @@ git push origin main
 - **Desarrollador:** Carlos Molina (Proemote)
 - **Email:** contactoproemote@gmail.com
 - **Repo:** GitHub (Proemote-Tech/finanzapp)
-- **Hosting:** Vercel (https://finanzapp.vercel.app)
+- **Hosting:** Vercel (https://finanzapp-money.vercel.app)
 - **Supabase Project:** Proemote DB
 
 ---
@@ -756,7 +756,7 @@ git push origin main
 
 - **GitHub:** https://github.com/Proemote/finanzapp
 - **Supabase Dashboard:** https://app.supabase.com/projects
-- **Vercel Dashboard:** https://vercel.com/dashboard · App: https://finanzapp-five-taupe.vercel.app
+- **Vercel Dashboard:** https://vercel.com/dashboard · App: https://finanzapp-money.vercel.app
 - **Desarrollador:** Carlos Molina Márquez (Proemote)
 - **Email:** contactoproemote@gmail.com
 
