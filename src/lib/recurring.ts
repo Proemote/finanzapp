@@ -132,3 +132,8 @@ export function detectRecurring(transactions: Transaction[]): RecurringSeries[] 
 export function monthlyEquivalent(series: RecurringSeries): number {
   return series.avgAmount * MONTHLY_FACTOR[series.frequency];
 }
+
+/** Coste (o ingreso) equivalente anual de una serie recurrente. */
+export function annualEquivalent(series: RecurringSeries): number {
+  return monthlyEquivalent(series) * 12;
+}

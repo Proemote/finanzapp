@@ -2,6 +2,7 @@
 
 import AccountsPanel from "@/components/AccountsPanel";
 import EmptyState from "@/components/EmptyState";
+import TransferSuggestions from "@/components/TransferSuggestions";
 import { useFinanzapp } from "@/context/finanzapp-context";
 
 export default function CuentasPage() {
@@ -17,7 +18,10 @@ export default function CuentasPage() {
       {!hasData ? (
         <EmptyState onFiles={handleFiles} />
       ) : (
-        <AccountsPanel transactions={transactions} />
+        <div className="space-y-5">
+          <AccountsPanel transactions={transactions} />
+          <TransferSuggestions transactions={transactions} />
+        </div>
       )}
     </div>
   );

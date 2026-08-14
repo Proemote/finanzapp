@@ -2,10 +2,11 @@
 
 import AnalyticsPanel from "@/components/AnalyticsPanel";
 import EmptyState from "@/components/EmptyState";
+import TrendCharts from "@/components/TrendCharts";
 import { useFinanzapp } from "@/context/finanzapp-context";
 
 export default function AnalyticsPage() {
-  const { hasData, visible, handleFiles } = useFinanzapp();
+  const { hasData, periodVisible, handleFiles } = useFinanzapp();
 
   return (
     <div className="space-y-5">
@@ -14,7 +15,14 @@ export default function AnalyticsPage() {
         <p className="mt-1 text-sm text-secondary">Evolución mensual y desglose por categoría.</p>
       </div>
 
-      {!hasData ? <EmptyState onFiles={handleFiles} /> : <AnalyticsPanel transactions={visible} />}
+      {!hasData ? (
+        <EmptyState onFiles={handleFiles} />
+      ) : (
+        <div className="space-y-5">
+          <AnalyticsPanel transactions={periodVisible} />
+          <TrendCharts transactions={periodVisible} />
+        </div>
+      )}
     </div>
   );
 }

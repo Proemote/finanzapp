@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { CloudDownload, CloudUpload, Download, Loader2, Plus, Trash2 } from "lucide-react";
+import ExportModal, { type ExportConfirmOptions } from "@/components/ExportModal";
+import PeriodSelector from "@/components/PeriodSelector";
 import { ALL_ACCOUNTS, useFinanzapp } from "@/context/finanzapp-context";
 import { SIN_CUENTA } from "@/lib/analytics";
 
@@ -20,8 +22,23 @@ export default function ControlBar() {
     handleSave,
     handleExport,
     handleClearAll,
+    periodPreset,
+    customRange,
   } = useFinanzapp();
   const [confirmingClear, setConfirmingClear] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+
+  const accountLabel =
+    activeAccount === ALL_ACCOUNTS
+      ? "Todas las cuentas"
+      : activeAccount === SIN_CUENTA
+      ? "Sin cuenta"
+      : activeAccount;
+
+  const confirmExport = (options: ExportConfirmOptions) => {
+    setShowExportModal(false);
+    void handleExport(options);
+  };
 
   if (!hasData && status.kind === "idle") return null;
 
@@ -29,26 +46,27 @@ export default function ControlBar() {
     <div className="mb-6 space-y-4">
       {hasData && (
         <div className="flex flex-wrap items-center justify-between gap-3">
-          {accounts.length > 1 ? (
-            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrar por cuenta">
-              {[ALL_ACCOUNTS, ...accounts].map((a) => (
-                <button
-                  key={a}
-                  onClick={() => setActiveAccount(a)}
-                  aria-pressed={activeAccount === a}
-                  className={`cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium transition-colors duration-150 ${
-                    activeAccount === a
-                      ? "bg-violet-deep text-white"
-                      : "border border-line text-secondary hover:border-line-strong hover:text-foreground"
-                  }`}
-                >
-                  {a === ALL_ACCOUNTS ? "Todas las cuentas" : a === SIN_CUENTA ? "Sin cuenta" : a}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <span />
-          )}
+          <div className="flex flex-wrap items-center gap-3">
+            <PeriodSelector />
+            {accounts.length > 1 && (
+              <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrar por cuenta">
+                {[ALL_ACCOUNTS, ...accounts].map((a) => (
+                  <button
+                    key={a}
+                    onClick={() => setActiveAccount(a)}
+                    aria-pressed={activeAccount === a}
+                    className={`cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium transition-colors duration-150 ${
+                      activeAccount === a
+                        ? "bg-violet-deep text-white"
+                        : "border border-line text-secondary hover:border-line-strong hover:text-foreground"
+                    }`}
+                  >
+                    {a === ALL_ACCOUNTS ? "Todas las cuentas" : a === SIN_CUENTA ? "Sin cuenta" : a}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div className="flex flex-wrap gap-2">
             <button onClick={() => setShowAddModal(true)} className={actionBtn}>
@@ -64,7 +82,7 @@ export default function ControlBar() {
               Guardar
             </button>
             <button
-              onClick={handleExport}
+              onClick={() => setShowExportModal(true)}
               className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-violet-deep px-4 py-2 text-sm font-semibold text-white transition-opacity duration-150 hover:opacity-90"
             >
               <Download className="h-4 w-4" aria-hidden />
@@ -128,6 +146,16 @@ export default function ControlBar() {
             </button>
           )}
         </div>
+      )}
+
+      {showExportModal && (
+        <ExportModal
+          defaultPreset={periodPreset}
+          defaultCustomRange={customRange}
+          accountLabel={accountLabel}
+          onConfirm={confirmExport}
+          onCancel={() => setShowExportModal(false)}
+        />
       )}
     </div>
   );

@@ -11,7 +11,7 @@ import {
 } from "react";
 import { monthlySummaries, SIN_CUENTA, totals } from "@/lib/analytics";
 import { classifyByRules, defaultCategory, UNCLASSIFIED } from "@/lib/categories";
-import { exportMasterExcel } from "@/lib/export";
+import { exportMasterExcel, type ExportSections } from "@/lib/export";
 import {
   parseFile,
   parseWithMapping,
@@ -19,6 +19,7 @@ import {
   type ManualMapping,
   type Row,
 } from "@/lib/parse";
+import { addMonths, inPeriod, monthKey, monthToDate, resolvePeriod, type PeriodPreset } from "@/lib/period";
 import {
   deleteAllTransactions,
   deleteTransaction,
@@ -43,6 +44,8 @@ interface MapperState {
 
 export const ALL_ACCOUNTS = "__all__";
 
+const CURRENT_MONTH = monthKey(new Date());
+
 interface FinanzappContextValue {
   transactions: Transaction[];
   visible: Transaction[];
@@ -56,6 +59,23 @@ interface FinanzappContextValue {
   hasData: boolean;
   totalsVisible: ReturnType<typeof totals>;
   monthsVisible: ReturnType<typeof monthlySummaries>;
+
+  /** Selector global de período (afecta a Dashboard/Analytics). */
+  periodPreset: PeriodPreset;
+  setPeriodPreset: (preset: PeriodPreset) => void;
+  customRange: { start: string; end: string } | null;
+  setCustomRange: (range: { start: string; end: string } | null) => void;
+  periodVisible: Transaction[];
+
+  /** Navegación mes a mes (vista mensual). */
+  selectedMonth: string;
+  setSelectedMonth: (month: string) => void;
+  goToPrevMonth: () => void;
+  goToNextMonth: () => void;
+  canGoNextMonth: boolean;
+  monthVisible: Transaction[];
+  prevMonthVisible: Transaction[];
+  availableMonths: string[];
 
   pendingFiles: File[] | null;
   setPendingFiles: (files: File[] | null) => void;
@@ -77,7 +97,12 @@ interface FinanzappContextValue {
   handleBulkCategoryChange: (ids: string[], category: string) => void;
   handleSave: () => Promise<void>;
   handleLoad: () => Promise<void>;
-  handleExport: () => Promise<void>;
+  handleExport: (options: {
+    preset: PeriodPreset;
+    customStart?: string;
+    customEnd?: string;
+    sections: ExportSections;
+  }) => Promise<void>;
   handleClearAll: () => Promise<void>;
 }
 
@@ -92,6 +117,9 @@ export function FinanzappProvider({ children }: { children: ReactNode }) {
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [mapper, setMapper] = useState<MapperState | null>(null);
   const [activeAccount, setActiveAccount] = useState(ALL_ACCOUNTS);
+  const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("last-6");
+  const [customRange, setCustomRange] = useState<{ start: string; end: string } | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState(CURRENT_MONTH);
 
   const accounts = useMemo(
     () => [...new Set(transactions.map((t) => t.account || SIN_CUENTA))].sort(),
@@ -104,6 +132,46 @@ export function FinanzappProvider({ children }: { children: ReactNode }) {
         ? transactions
         : transactions.filter((t) => (t.account || SIN_CUENTA) === activeAccount),
     [transactions, activeAccount]
+  );
+
+  const availableMonths = useMemo(
+    () => [...new Set(transactions.map((t) => t.date.slice(0, 7)))].sort(),
+    [transactions]
+  );
+
+  const periodRange = useMemo(
+    () =>
+      resolvePeriod(periodPreset, {
+        customStart: customRange?.start,
+        customEnd: customRange?.end,
+      }),
+    [periodPreset, customRange]
+  );
+
+  const periodVisible = useMemo(
+    () => visible.filter((t) => inPeriod(t.date, periodRange)),
+    [visible, periodRange]
+  );
+
+  const monthVisible = useMemo(
+    () => visible.filter((t) => t.date.startsWith(selectedMonth)),
+    [visible, selectedMonth]
+  );
+
+  const prevMonth = useMemo(() => monthKey(addMonths(monthToDate(selectedMonth), -1)), [selectedMonth]);
+  const prevMonthVisible = useMemo(
+    () => visible.filter((t) => t.date.startsWith(prevMonth)),
+    [visible, prevMonth]
+  );
+
+  const canGoNextMonth = selectedMonth < CURRENT_MONTH;
+  const goToPrevMonth = useCallback(
+    () => setSelectedMonth((m) => monthKey(addMonths(monthToDate(m), -1))),
+    []
+  );
+  const goToNextMonth = useCallback(
+    () => setSelectedMonth((m) => (m < CURRENT_MONTH ? monthKey(addMonths(monthToDate(m), 1)) : m)),
+    []
   );
 
   /** Paso 1: el usuario elige archivos → preguntamos la cuenta. */
@@ -376,19 +444,32 @@ export function FinanzappProvider({ children }: { children: ReactNode }) {
     setStatus({ kind: "ok", message: "Todos los movimientos han sido eliminados" });
   }, []);
 
-  const handleExport = useCallback(async () => {
-    setStatus({ kind: "working", message: "Generando Excel…" });
-    try {
-      const accountLabel = activeAccount === ALL_ACCOUNTS ? undefined : activeAccount;
-      await exportMasterExcel(visible, accountLabel);
-      setStatus({ kind: "ok", message: "Excel generado y descargado" });
-    } catch (err) {
-      setStatus({
-        kind: "error",
-        message: err instanceof Error ? err.message : "Error al generar el Excel",
-      });
-    }
-  }, [visible, activeAccount]);
+  const handleExport = useCallback(
+    async (options: {
+      preset: PeriodPreset;
+      customStart?: string;
+      customEnd?: string;
+      sections: ExportSections;
+    }) => {
+      setStatus({ kind: "working", message: "Generando Excel…" });
+      try {
+        const range = resolvePeriod(options.preset, {
+          customStart: options.customStart,
+          customEnd: options.customEnd,
+        });
+        const scoped = visible.filter((t) => inPeriod(t.date, range));
+        const accountLabel = activeAccount === ALL_ACCOUNTS ? undefined : activeAccount;
+        await exportMasterExcel(scoped, { accountLabel, periodLabel: range.label, sections: options.sections });
+        setStatus({ kind: "ok", message: `Excel generado y descargado (${scoped.length} movimientos)` });
+      } catch (err) {
+        setStatus({
+          kind: "error",
+          message: err instanceof Error ? err.message : "Error al generar el Excel",
+        });
+      }
+    },
+    [visible, activeAccount]
+  );
 
   const totalsVisible = totals(visible);
   const monthsVisible = monthlySummaries(visible);
@@ -407,6 +488,19 @@ export function FinanzappProvider({ children }: { children: ReactNode }) {
     hasData,
     totalsVisible,
     monthsVisible,
+    periodPreset,
+    setPeriodPreset,
+    customRange,
+    setCustomRange,
+    periodVisible,
+    selectedMonth,
+    setSelectedMonth,
+    goToPrevMonth,
+    goToNextMonth,
+    canGoNextMonth,
+    monthVisible,
+    prevMonthVisible,
+    availableMonths,
     pendingFiles,
     setPendingFiles,
     showAddModal,

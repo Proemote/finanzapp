@@ -2,7 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
-import { categorySummaries, formatEUR, formatMonthLong, monthlySummaries } from "@/lib/analytics";
+import {
+  categorySummaries,
+  formatEUR,
+  formatMonthLong,
+  monthlySummaries,
+  percentDelta as delta,
+  withCumulative,
+} from "@/lib/analytics";
 import type { Transaction } from "@/lib/types";
 
 interface Props {
@@ -10,12 +17,6 @@ interface Props {
 }
 
 const monthLabel = formatMonthLong;
-
-/** Variación porcentual vs. el valor anterior; null si no es calculable. */
-function delta(current: number, previous: number | undefined): number | null {
-  if (previous == null || previous === 0) return null;
-  return ((current - previous) / previous) * 100;
-}
 
 /** Por encima de esto, la base es tan pequeña que el % ya no dice nada útil. */
 const DELTA_DISPLAY_CAP = 999;
@@ -46,17 +47,13 @@ function DeltaBadge({ value, goodWhenUp }: { value: number | null; goodWhenUp: b
 
 export default function AnalyticsPanel({ transactions }: Props) {
   const months = useMemo(() => {
-    const list = monthlySummaries(transactions);
-    let cumulative = 0;
+    const list = withCumulative(monthlySummaries(transactions));
     return list.map((m, i) => {
-      cumulative += m.balance;
       const prev = list[i - 1];
       return {
         ...m,
-        cumulative,
         incomeDelta: delta(m.income, prev?.income),
         expenseDelta: delta(m.expense, prev?.expense),
-        savingsRate: m.income > 0 ? (m.balance / m.income) * 100 : null,
       };
     });
   }, [transactions]);

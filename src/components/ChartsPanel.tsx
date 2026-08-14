@@ -14,90 +14,12 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { AXIS_STYLE, CHART_COLORS, Legend, Panel, VizTooltip } from "@/components/charts/ChartKit";
 import { categorySummaries, formatEUR, formatMonth, monthlySummaries } from "@/lib/analytics";
 import type { Transaction } from "@/lib/types";
 
 interface Props {
   transactions: Transaction[];
-}
-
-const AXIS_STYLE = { fontSize: 11, fill: "var(--viz-axis)" };
-
-/** Paleta categórica para el donut: morado líder + 5 tonos distinguibles (validada CVD). */
-const DONUT_COLORS = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-  "var(--chart-6)",
-];
-
-function Panel({
-  title,
-  subtitle,
-  children,
-  className = "",
-  glow = false,
-}: {
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-  className?: string;
-  glow?: boolean;
-}) {
-  return (
-    <section className={`card p-5 ${glow ? "card-glow" : ""} ${className}`}>
-      <h3 className="text-base font-semibold">{title}</h3>
-      {subtitle && <p className="mt-0.5 text-xs text-muted">{subtitle}</p>}
-      <div className="mt-4">{children}</div>
-    </section>
-  );
-}
-
-interface TooltipPayloadItem {
-  name?: string;
-  value?: number | string;
-  color?: string;
-  payload?: { category?: string };
-}
-
-function VizTooltip({
-  active,
-  payload,
-  label,
-}: {
-  active?: boolean;
-  payload?: TooltipPayloadItem[];
-  label?: string;
-}) {
-  if (!active || !payload || payload.length === 0) return null;
-  return (
-    <div className="rounded-lg border border-line-strong bg-surface-2 px-3 py-2 text-sm shadow-xl">
-      {label && <p className="mb-1 font-medium">{label}</p>}
-      {payload.map((entry, i) => (
-        <p key={i} className="flex items-center gap-2 text-secondary">
-          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
-          {entry.name}:{" "}
-          <span className="font-medium text-foreground">{formatEUR(Number(entry.value))}</span>
-        </p>
-      ))}
-    </div>
-  );
-}
-
-function Legend({ items }: { items: { label: string; color: string; value?: string }[] }) {
-  return (
-    <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-secondary">
-      {items.map(({ label, color, value }) => (
-        <li key={label} className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
-          {label}
-          {value && <span className="ml-1 font-medium text-foreground">{value}</span>}
-        </li>
-      ))}
-    </ul>
-  );
 }
 
 export default function ChartsPanel({ transactions }: Props) {
@@ -202,7 +124,7 @@ export default function ChartsPanel({ transactions }: Props) {
                 strokeWidth={0}
               >
                 {donutData.map((entry, i) => (
-                  <Cell key={entry.category} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />
+                  <Cell key={entry.category} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                 ))}
               </Pie>
             </PieChart>
@@ -214,7 +136,7 @@ export default function ChartsPanel({ transactions }: Props) {
         </div>
         <ul className="mt-4 space-y-2.5">
           {donutData.map((c, i) => {
-            const color = DONUT_COLORS[i % DONUT_COLORS.length];
+            const color = CHART_COLORS[i % CHART_COLORS.length];
             const pct = totalExpense > 0 ? (c.total / totalExpense) * 100 : 0;
             return (
               <li key={c.category} className="text-xs">

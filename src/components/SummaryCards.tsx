@@ -2,55 +2,45 @@
 
 import { PiggyBank, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { formatEUR } from "@/lib/analytics";
-import type { MonthlySummary } from "@/lib/types";
 
 interface Props {
+  income: number;
+  expense: number;
   balance: number;
-  months: MonthlySummary[];
+  savingsRate: number | null;
 }
 
-const monthLabel = (month: string) => {
-  const [y, m] = month.split("-");
-  return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString("es-ES", {
-    month: "long",
-    year: "numeric",
-  });
-};
-
-export default function SummaryCards({ balance, months }: Props) {
-  const last = months[months.length - 1];
-  const savingsRate = last && last.income > 0 ? (last.balance / last.income) * 100 : null;
-  const subtitle = last ? `En ${monthLabel(last.month)}` : "Sin datos";
-
+/** KPIs del período activo: Ingresos, Gastos, Balance, Tasa de ahorro. */
+export default function SummaryCards({ income, expense, balance, savingsRate }: Props) {
   const cards = [
     {
-      label: "Balance General",
-      value: formatEUR(balance),
-      sub: "Historial acumulado",
-      icon: Wallet,
-      chip: "bg-violet/15 text-violet",
-      valueClass: balance >= 0 ? "text-foreground" : "text-bad",
-    },
-    {
-      label: "Ingresos del Mes",
-      value: last ? formatEUR(last.income) : "—",
-      sub: subtitle,
+      label: "Ingresos",
+      value: formatEUR(income),
+      sub: "En el período",
       icon: TrendingUp,
       chip: "bg-good/15 text-good",
       valueClass: "text-foreground",
     },
     {
-      label: "Gastos del Mes",
-      value: last ? formatEUR(last.expense) : "—",
-      sub: subtitle,
+      label: "Gastos",
+      value: formatEUR(expense),
+      sub: "En el período",
       icon: TrendingDown,
       chip: "bg-bad/15 text-bad",
       valueClass: "text-foreground",
     },
     {
+      label: "Balance",
+      value: `${balance >= 0 ? "+" : ""}${formatEUR(balance)}`,
+      sub: "Ingresos − gastos",
+      icon: Wallet,
+      chip: "bg-violet/15 text-violet",
+      valueClass: balance >= 0 ? "text-good" : "text-bad",
+    },
+    {
       label: "Tasa de Ahorro",
       value: savingsRate != null ? `${savingsRate.toFixed(1)}%` : "—",
-      sub: subtitle,
+      sub: "Del ingreso total",
       icon: PiggyBank,
       chip: "bg-violet/15 text-violet",
       valueClass: savingsRate != null && savingsRate < 0 ? "text-bad" : "text-violet",

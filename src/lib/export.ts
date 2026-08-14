@@ -1,6 +1,28 @@
 import ExcelJS from "exceljs";
-import { accountSummaries, categorySummaries, monthlySummaries, totals } from "./analytics";
+import {
+  accountSummaries,
+  categorySummaries,
+  monthlySummaries,
+  totals,
+  weeklySummaries,
+  yearlySummaries,
+} from "./analytics";
 import type { Transaction } from "./types";
+
+/** Hojas opcionales del Excel — Movimientos y Resumen mensual son siempre el núcleo. */
+export interface ExportSections {
+  categorias: boolean;
+  cuentas: boolean;
+  resumenAnual: boolean;
+  mensualSemanal: boolean;
+}
+
+export interface ExportOptions {
+  accountLabel?: string;
+  /** Etiqueta del período elegido en el modal (para el nombre del archivo). */
+  periodLabel?: string;
+  sections: ExportSections;
+}
 
 const COLOR = {
   header: "FF1F3864",
@@ -60,19 +82,23 @@ const monthLabel = (month: string) => {
 };
 
 /**
- * Genera y descarga el "Excel maestro de finanzas": resumen mensual,
- * desglose por categorías, cuentas y todos los movimientos, agrupados
- * por mes con totales — estilo cuadrante contable.
+ * Genera y descarga el "Excel maestro de finanzas". Movimientos y Resumen
+ * mensual son el núcleo (siempre se incluyen); Categorías, Cuentas, Resumen
+ * anual y las hojas mensuales con desglose semanal son opcionales, elegidas
+ * por el usuario en el modal de exportación.
  */
-export async function exportMasterExcel(transactions: Transaction[], accountLabel?: string) {
+export async function exportMasterExcel(transactions: Transaction[], options: ExportOptions) {
+  const { accountLabel, sections } = options;
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Finanzapp";
   workbook.created = new Date();
 
   buildResumenSheet(workbook, transactions);
   buildMovimientosSheet(workbook, transactions);
-  buildCategoriasSheet(workbook, transactions);
-  buildCuentasSheet(workbook, transactions);
+  if (sections.categorias) buildCategoriasSheet(workbook, transactions);
+  if (sections.cuentas) buildCuentasSheet(workbook, transactions);
+  if (sections.resumenAnual) buildResumenAnualSheet(workbook, transactions);
+  if (sections.mensualSemanal) buildMonthlyWeeklySheets(workbook, transactions);
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], {
@@ -274,6 +300,99 @@ function buildCuentasSheet(workbook: ExcelJS.Workbook, transactions: Transaction
   styleTotalRow(totalRow);
 
   freezeHeader(sheet);
+}
+
+function buildResumenAnualSheet(workbook: ExcelJS.Workbook, transactions: Transaction[]) {
+  const sheet = workbook.addWorksheet("Resumen anual");
+  sheet.columns = [
+    { header: "Año", key: "year", width: 12 },
+    { header: "Ingresos", key: "ingresos", width: 16 },
+    { header: "Gastos", key: "gastos", width: 16 },
+    { header: "Balance", key: "balance", width: 16 },
+  ];
+  styleHeaderRow(sheet.getRow(1));
+
+  const years = yearlySummaries(transactions);
+  years.forEach((y, i) => {
+    const row = sheet.addRow({
+      year: y.year,
+      ingresos: round2(y.income),
+      gastos: round2(y.expense),
+      balance: round2(y.balance),
+    });
+    styleBodyRow(row, i % 2 === 1);
+    ["ingresos", "gastos", "balance"].forEach((k) => (row.getCell(k).numFmt = EUR_FMT));
+    row.getCell("balance").font = {
+      bold: true,
+      color: { argb: y.balance >= 0 ? COLOR.income : COLOR.expense },
+    };
+  });
+
+  const t = totals(transactions);
+  const totalRow = sheet.addRow({
+    year: "TOTAL",
+    ingresos: round2(t.income),
+    gastos: round2(t.expense),
+    balance: round2(t.balance),
+  });
+  ["ingresos", "gastos", "balance"].forEach((k) => (totalRow.getCell(k).numFmt = EUR_FMT));
+  styleTotalRow(totalRow);
+
+  freezeHeader(sheet);
+}
+
+/** Nombre de hoja válido para Excel: máx. 31 caracteres, sin \ / ? * [ ] : */
+function sheetSafeName(name: string): string {
+  return name.replace(/[\\/?*[\]:]/g, "-").slice(0, 31);
+}
+
+/** Una hoja por mes con el desglose semanal (ingresos/gastos por Semana 1-5), como en el Excel de referencia. */
+function buildMonthlyWeeklySheets(workbook: ExcelJS.Workbook, transactions: Transaction[]) {
+  const months = monthlySummaries(transactions);
+  const usedNames = new Set<string>();
+
+  for (const m of months) {
+    let name = sheetSafeName(monthLabel(m.month));
+    let suffix = 2;
+    while (usedNames.has(name)) {
+      name = sheetSafeName(`${monthLabel(m.month)} (${suffix++})`);
+    }
+    usedNames.add(name);
+
+    const sheet = workbook.addWorksheet(name);
+    sheet.columns = [
+      { header: "Semana", key: "semana", width: 14 },
+      { header: "Ingresos", key: "ingresos", width: 16 },
+      { header: "Gastos", key: "gastos", width: 16 },
+      { header: "Balance", key: "balance", width: 16 },
+    ];
+    styleHeaderRow(sheet.getRow(1));
+
+    const weeks = weeklySummaries(transactions, m.month);
+    weeks.forEach((w, i) => {
+      const balance = w.income - w.expense;
+      const row = sheet.addRow({
+        semana: w.label,
+        ingresos: round2(w.income),
+        gastos: round2(w.expense),
+        balance: round2(balance),
+      });
+      styleBodyRow(row, i % 2 === 1);
+      ["ingresos", "gastos", "balance"].forEach((k) => (row.getCell(k).numFmt = EUR_FMT));
+      row.getCell("balance").font = { color: { argb: balance >= 0 ? COLOR.income : COLOR.expense } };
+    });
+
+    const totalRow = sheet.addRow({
+      semana: "TOTAL",
+      ingresos: round2(m.income),
+      gastos: round2(m.expense),
+      balance: round2(m.balance),
+    });
+    ["ingresos", "gastos", "balance"].forEach((k) => (totalRow.getCell(k).numFmt = EUR_FMT));
+    styleTotalRow(totalRow);
+
+    freezeHeader(sheet);
+  }
 }
 
 function round2(n: number): number {
